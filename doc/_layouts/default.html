@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+
+ <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full"></script>
+
+  </head>
+  <body>
+
+<script type="math/tex; mode=display">
+   \newcommand{\vect}[1]{\underline{#1}}
+   \newcommand{\mat}[1]{\mathbf{#1}}
+   \newcommand{\eye}[0]{\mathbf{I}}
+   \newcommand{\est}[1]{\hat{#1}}
+   \newcommand{\err}[1]{\tilde{#1}}
+   \newcommand{\pd}[2]{\frac{\partial{#1}}{\partial{#2}}}
+   \newcommand{\transp}[1]{#1^{T}}
+   \newcommand{\inv}[1]{#1^{-1}}
+   \newcommand{\norm}[1]{|{#1}|}
+   \def\rddots{\cdot^{\cdot^{\cdot}}}
+   \newcommand{\jac}[3]{\frac{\partial{#1}}{\partial{#2}}|_{#3}} % Jacobian
+</script>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  TeX: { equationNumbers: { autoNumber: "AMS" } }
+});
+</script>
+
+
+    <nav>
+      <a href="/">Home</a>
+    </nav>
+    <h1>{{ page.title }}</h1>
+    <section>
+      {{ content }}
+    </section>
+    <footer>
+
+      <p><a href="mailto:drouin at recherche.enac.fr">feedback</a></p>
+
+    </footer>
+  </body>
+</html>

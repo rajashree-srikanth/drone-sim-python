@@ -1,0 +1,10 @@
+name: "Projet Dronisos"
+description: "Projet Dronisos"
+
+url: "http://somewhere.someplace.fr"
+
+#markdown: rdiscount
+#markdown: kramdown
+#permalink: pretty
+#highlighter: pygments
+#highlighter: rouge
