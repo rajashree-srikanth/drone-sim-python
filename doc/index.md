@@ -8,6 +8,23 @@ layout: default
 
 [announcement](https://docs.google.com/document/d/1FLXtXxfzXPU8-o3bSRl9ffA2X2acWMpPDPAWWRowjEY/edit)
 
+## Scenario
+
+Perform a formation flight like aerobatics patrols do. For example fly in a V shaped formation along a straight line.
+
+It feels like once this is achieved without cheating, we're maybe closer to more complex trajectorie, like the same V formation, but spinning around the horizontal axis, like and helix.
+
+## Challenges
+
+  - Operational: takeoff, landing, communications, staging, reliability, calibration...
+  
+  - Theoretical:
+    
+	- 3D+t guidance
+	- online path planning (for initial rendez-vous)
+    - verification that a trajectory is possible to fly (given a wind field) 
+
+
 ## 2D experiment
 
 ### State Space representation
@@ -32,6 +49,6 @@ $$
 $$
 
 
-TODO: rigorously reestablish those equations which will involve time derivatives of wind, which we can later decide to neglect.
+TODO: rigorously reestablish those equations (which might involve time derivatives of wind, which we can later decide to neglect).
 
 
