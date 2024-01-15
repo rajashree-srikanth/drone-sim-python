@@ -31,26 +31,26 @@ def test_simulation(scen, show_chrono, show_2d, show_anim):
     windfield = scen.windfield
     aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))]
     ctls = [ddg.PurePursuitControler(traj) for traj in scen.trajs]
-    #traj = scen.trajs[0]
-    #aircraft = aircrafts[0]
-    #X0 = scen.X0s[0] #[0, 0, 0, 0, 9.]
-
     Xs, Us, Yrefs = [], [], []
     for traj, aircraft, X0, ctl in zip(scen.trajs, aircrafts, scen.X0s, ctls):
         X, U, Yref = run_simulation(scen.time, aircraft, windfield, ctl, X0)
         Xs.append(X); Us.append(U); Yrefs.append(Yref)
         
-    if show_2d: du.plot_trajectory_2d(scen.time, X, U, Yref)
-    if show_chrono: du.plot_trajectory_chrono(scen.time, X, U, Yref)
+    if show_2d:
+        du.plot_trajectory_2d(scen.time, X, U, Yref)
+    if show_chrono:
+        du.plot_trajectory_chrono(scen.time, X, U, Yref)
     if show_anim:
-        anim = dda.animate(scen.time, Xs, Us, None, Yrefs, title=f'scenario: {scen.name}', extends=scen.extends)
+        extra = [np.array(ctl.carrot), np.array(ctl.ref_pos)]
+        #extra = None
+        anim = dda.animate(scen.time, Xs, Us, Yrefs, Xref=None, Extra=extra, title=f'Simulation (scen {scen.name})', extends=scen.extends)
     else: anim=None
     return anim
 
 
 
 def parse_command_line():
-    parser = argparse.ArgumentParser(description='Plot a trajectory.')
+    parser = argparse.ArgumentParser(description='Runs a simulation.')
     parser.add_argument('--scen', help='the name of the trajectory', default=None)
     parser.add_argument('--anim', help='plot animation', action='store_true', default=False)
     parser.add_argument('--twod', help='plot 2d track', action='store_true', default=False)

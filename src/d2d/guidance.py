@@ -28,17 +28,26 @@ class DiffFlatness:
         psi = np.arctan2(invv*yd, invv*xd)
         X[ddyn.Aircraft.s_psi] = psi
         ## TODO
-        yda_ov_xda =  yda / xda           # roll
-        invv_ydaovxda = invv*yda_ov_xda
-        invv_ydaovxda_dot = 1.
-        psid = invv_ydaovxda_dot / (1.+invv_ydaovxda**2)
-        g = 9.81
-        phi = np.arctan2(v*psid, g)
-        X[ddyn.Aircraft.s_phi] = 0. #phi
-        # rolldot
-        # vdot
-        # roll_sp, v_sp
+        if 0:
+            yda_ov_xda =  yda / xda           # roll
+            invv_ydaovxda = invv*yda_ov_xda
+            invv_ydaovxda_dot = 1.
+            psid = invv_ydaovxda_dot / (1.+invv_ydaovxda**2)
+            g = 9.81
+            phi = np.arctan2(v*psid, g)
+            X[ddyn.Aircraft.s_phi] = 0. #phi
+            # rolldot
+            # vdot
+            # roll_sp, v_sp
         return X, U
+
+
+class VelControler:
+    def get(self, tself, tref):
+        dt = tself - tref
+        #print(f'{tself:.1f}, {tref:.1f} {dt:.1f}')
+        v = 10. -np.clip(2. * dt, -3., 3.) # m/s
+        return v
     
 class PurePursuitControler:
     def __init__(self, traj):
@@ -48,12 +57,15 @@ class PurePursuitControler:
         self.pts_2d = np.array([traj.get(t)[0] for t in self.time])
         self.sat_phi = np.deg2rad(45.)
         self.ref_pos, self.carrot = [], []
+        self.vel_ctl = VelControler()
         
     def get(self, X, t):#, time):
         dists = np.linalg.norm(self.pts_2d-X[:ddyn.Aircraft.s_psi], axis=1)
         idx_closest = np.argmin(dists)
         self.ref_pos.append(self.pts_2d[idx_closest])
-        #print(f'{self.time[idx_closest]:.1f}, {t:.1f}')
+        t0, t1 = self.time[idx_closest], t
+        #print(f'{t0:.1f}, {t1:.1f} {t0 - t1:.1f}')
+        tself = self.time[idx_closest]
         if 1:
             lookahead_m, dt, v = 10, 0.01, 10 # lookahaead in m, dt in sec, v in m/s
             idx_carrot = min(idx_closest + int(lookahead_m/v/dt), len(self.pts_2d)-1)
@@ -64,10 +76,10 @@ class PurePursuitControler:
         self.carrot.append(carrot)
         pc = carrot-X[ddyn.Aircraft.s_slice_pos]
         err_psi = norm_mpi_pi(X[2] - np.arctan2(pc[1], pc[0]))
-        K= 0.75#0.2
+        K= 1.#0.2
         phi_sp = -K*err_psi
-        #print(np.rad2deg(phi_sp))
         phi_sp = np.clip(phi_sp, -self.sat_phi, self.sat_phi)
-        return [phi_sp, 10.]
+        v_sp = 10. #self.vel_ctl.get(tself, t)
+        return [phi_sp, v_sp]
 
     

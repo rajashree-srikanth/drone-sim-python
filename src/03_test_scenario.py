@@ -23,7 +23,7 @@ def test_scenario(scn):
     #Yref = [Yref1]
     #Yrefs = [Yref1, Yref2, Yref3]
     Xref = None
-    anim = dda.animate(scn.time, X, U, Xref, Yrefs, title=f'scenario: {scn.name}', extends=scn.extends)
+    anim = dda.animate(scn.time, X, U, Yrefs, Xref, title=f'scenario: {scn.name}', extends=scn.extends)
     return anim
 
 
@@ -31,9 +31,9 @@ def parse_command_line():
     parser = argparse.ArgumentParser(description='Plot a trajectory.')
     parser.add_argument('--scen', help='the name of the scenario', default=None)
     parser.add_argument('--anim', help='plot animation', action='store_true', default=False)
-    parser.add_argument('--twod', help='plot 2d track', action='store_true', default=False)
-    parser.add_argument('--X', help='plot state', action='store_true', default=False)
-    parser.add_argument('--Y', help='plot output', action='store_true', default=False)
+#    parser.add_argument('--twod', help='plot 2d track', action='store_true', default=False)
+#    parser.add_argument('--X', help='plot state', action='store_true', default=False)
+#    parser.add_argument('--Y', help='plot output', action='store_true', default=False)
     parser.add_argument('--list', help='list all known trajectories', action='store_true', default=False)
     args = parser.parse_args()
     return args

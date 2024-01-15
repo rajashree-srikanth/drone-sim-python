@@ -5,10 +5,50 @@ import math, numpy as np
 # 2D+t trajectories
 #
 
+#
+# Utility fonctions
+#
+#
+# Scalar trajectories (aka 1D)
+# 
+class CstOne:
+    def __init__(self, c=-1.):
+        self.c = c
+    def get(self, t):
+        return np.array([self.c, 0, 0, 0])
 
+class AffineOne:
+    def __init__(self, c1=-1., c2=0, duration=1.):
+        self.c1, self.c2, self.duration = c1, c2, duration
+
+    def get(self, t):
+        return np.array([self.c1*t+self.c2, self.c1, 0, 0])
+
+class SinOne:
+    def __init__(self, c=0., a=1., om=1., duration=2*np.pi):
+        self.duration = duration
+        self.c, self.a, self.om = c, a, om
+        self.t0 = 0.
+
+    def get(self, t):
+        alpha = self.om*(t-self.t0)
+        asa, aca = self.a*np.sin(alpha), self.a*np.cos(alpha)
+        return np.array([  self.c + asa,
+                           self.om*aca,
+                          -self.om**2*asa,
+                          -self.om**3*aca])#,
+                           #self.om**4*asa   ])
+
+
+#
+# We represent our trajectories as a pair of smooth functions of time
+#
 class Trajectory:
     cx, cy, ncomp = np.arange(3)
     nder = 3
+    def __init__(self): self.t0 = 0.
+    def get(self, t): return np.zeros((Trajectory.nder+1, Trajectory.ncomp))
+    def reset(self, t0): self.t0 = t0
 
 
 class TrajectoryLine(Trajectory):
@@ -27,15 +67,14 @@ class TrajectoryLine(Trajectory):
         Yc[0,:3] = self.p1 + self.un*self.v*(t-self.t0)
         Yc[1,:3] =           self.un*self.v
         return Yc#Yc.T
-    
 
 class TrajectoryCircle(Trajectory):
-
+    # sign of r specifies direction
     def __init__(self, c=[30., 30.],  r=30., v=10., t0=0., alpha0=0, dalpha=2*np.pi):
         self.c, self.r, self.v, self.t0 = np.asarray(c), r, v, t0 # mxm, m, m/s
         self.alpha0, self.dalpha = alpha0, dalpha # rad
         self.omega = self.v/self.r                # rad/s
-        self.duration = r*dalpha/v
+        self.duration = np.abs(r)*dalpha/v
 
     def reset(self, t0): self.t0 = t0
        
@@ -47,8 +86,6 @@ class TrajectoryCircle(Trajectory):
         p2 = self.omega**2*self.r*np.array([-ca, -sa])
         p3 = self.omega**3*self.r*np.array([ sa, -ca])
         return np.array((p, p1, p2, p3))
-
-
 
 
 #
@@ -88,8 +125,7 @@ class PolynomialOne:
                 self.coefs[d, pow] = arr(d, pow+d)*self.coefs[0, pow+d]
 
     def get(self, t):
-        # Horner method for computing polynomial value
-        Y = np.zeros(self._der)
+        Y = np.zeros(self._der) # Horner method for computing polynomial value
         for d in range(0, self._der):
             v = self.coefs[d,-1]
             for j in range(self._order-2, -1, -1):
@@ -111,10 +147,8 @@ class MinSnapPoly(Trajectory):
             Y1[:,0] = Y10
         else:
             Y1 = Y10
-
         self._polys = [PolynomialOne(Y0[i], Y1[i], self.duration) for i in range(Trajectory.ncomp)]
         self.t0 = 0
-
 
     def reset(self, t0):
         self.t0 = t0
@@ -134,37 +168,51 @@ class CompositeTraj:
             s.reset(st)
         self.t0 = 0.
 
-    def reset(self, t0):
-        #print('reset at {}'.format(t0))
-        self.t0 = t0
+    def reset(self, t0): self.t0 = t0
 
     def get(self, t):
         dt = t - self.t0
         Yc = np.zeros((5,4))
         dt_lapse = math.fmod(dt, self.duration)
         cur_step = np.argmax(self.steps_end > dt_lapse)
-        #print('get t {} dt {} cur_step {}'.format(t, dt, cur_step))
         Yc = self.steps[cur_step].get(dt_lapse)
         return Yc
 
 
-class CircleWithIntro(CompositeTraj):
 
-    def __init__(self, c=[0, 0, -0.5], r=1., v=3., dt_intro=1.8, dt_stay=0.):
-        eps = np.deg2rad(2)
-        circle = Circle(c,  r,  v, np.pi/2-eps, 2*np.pi+2*eps)
-        Y0 = [0, 0, 0, 0]
-        Y1 = circle.get(0.)
-        Y2 = circle.get(circle.duration)
-        steps = [SmoothLine(Y0, Y1, duration=dt_intro),
-                 circle,
-                 SmoothLine(Y2, Y0, duration=dt_intro),
-                 Cst(Y0, dt_stay)]
-        CompositeTraj.__init__(self, steps)
+class SpaceIndexedTraj(Trajectory):
+    def __init__(self, geometry, dynamic):
+        self.duration = dynamic.duration
+        self._geom, self._dyn = geometry, dynamic
 
+    def set_dyn(self, dyn): self._dyn = dyn
+
+    def get(self, t):
+        Yt = np.zeros((self._geom.nder+1, self._geom.ncomp))
+        _lambda = self._dyn.get(t) # lambda(t), lambdadot(t)...
+        _lambda[0] = np.clip(_lambda[0], 0., 1.)   # protect ourselvf against unruly dynamics 
+        _g = self._geom.get(_lambda[0])  # g(lambda), dg/dlambda(lambda)...
+        Yt[0, :] = _g[0,:]
+        Yt[1, :] = _lambda[1]*_g[1,:]
+        Yt[2, :] = _lambda[2]*_g[1,:] + _lambda[1]**2*_g[2,:]
+        Yt[3, :] = _lambda[3]*_g[1,:] + 3*_lambda[1]*_lambda[2]*_g[2,:] + _lambda[1]**3*_g[3,:]
+        #Yt[4, :] = _lambda[4]*_g[:,1] + (3*_lambda[2]**2+4*_lambda[1]*_lambda[3])*_g[:,2] + 6*_lambda[1]**2*_lambda[2]*_g[:,3] + _lambda[1]**4*_g[:,4]
+        return Yt
 
     
-
+import matplotlib.pyplot as plt
+def check_si(traj):
+    time = np.arange(0, traj.duration, 0.01)
+    lambdas = np.array([traj._dyn.get(t) for t in time])
+    _f = plt.figure()
+    _a = _f.subplots(4, 1)
+    _a[0].plot(time, lambdas[:,0])
+    _a[1].plot(time, lambdas[:,1])
+    _a[2].plot(time, lambdas[:,2])
+    _a[3].plot(time, lambdas[:,3])
+    plt.show()
+    breakpoint()
+    
 # check trajectory consistency
 # stolen from PAT, needs testing
 def check_consistency(time, Y):
