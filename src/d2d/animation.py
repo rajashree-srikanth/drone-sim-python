@@ -6,8 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt    
 import matplotlib.animation as animation
 import matplotlib.image, matplotlib.offsetbox, matplotlib.transforms
+import time
 
-def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None, title='Animation', _drawings=False, _imgs=True, figure=None, ax=None, extends=None):
+def plot_wind():
+    pass
+
+def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
+            title='Animation', _drawings=False, _imgs=True, figure=None, ax=None, extends=None):
     if extends is None: extends = (0, 100, 0, 100)
     _xmin, _xmax, _ymin, _ymax = extends
     time_factor = 1. # Nope :(2.

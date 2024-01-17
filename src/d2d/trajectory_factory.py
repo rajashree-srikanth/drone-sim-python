@@ -59,6 +59,33 @@ class TrajLineWithIntro(ddt.CompositeTraj):
         self.extends = (-50, 130, -30, 130)  # _xmin, _xmax, _ymin, _ymax
 register(TrajLineWithIntro) 
 
+
+class TrajWithIntro(ddt.CompositeTraj):
+    name = "traj_with_intro"
+    desc = "traj with circle_intro"
+    def __init__(self, Y0, traj, v=10, duration=8.):
+        Y1 = traj.get(0)[0] # start position of next trajectory step
+        Y2 = (Y0+Y1)/2
+        Y0Y1 = Y1-Y0
+        y0y1 = np.linalg.norm(Y0Y1)
+        n = 1/y0y1*Y0Y1
+        p = np.array(-n[1], n[0])
+        z = 0.
+        beta = np.arctan2(z, y0y1)
+        alpha = np.pi - 2*beta
+        dist = v*duration
+        R = y0y1/np.cos(beta)
+        #R = dist/2/np.pi/alpha
+        #breakpoint()
+        #Yc = (np.asarray(Y0)+Y1)/2
+        #s1 = ddt.TrajectoryCircle(c=Yc,  r=r, v=10., alpha0=np.pi/2, dalpha = np.pi)
+        v_line = y0y1/duration # m/s in straight line
+        intro = ddt.TrajectoryLine(Y0, Y1, v=v_line)
+        #self.extends = (-50, 130, -30, 130)  # _xmin, _xmax, _ymin, _ymax
+        ddt.CompositeTraj.__init__(self, [intro, traj])
+#register(TrajWithIntro) needs to be in a scenario
+
+
 # TODO not sure what it is supposed to be
 class CircleWithIntro(ddt.CompositeTraj):
     name = "Circle_intro"

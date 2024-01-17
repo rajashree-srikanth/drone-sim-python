@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import d2d.guidance as dg
 import d2d.utils as du
+import d2d.ploting as d2plot
 import d2d.dynamic as ddd
 import d2d.animation as dda
 import d2d.trajectory as ddt
@@ -19,15 +20,15 @@ def display_trajectory(traj, show_Yref=True, show_Xref=True, show_2d=True):
     Yref = np.array([traj.get(t) for t in time])
     Xref = None
     if show_Yref:
-        du.plot_flat_output_trajectory_chrono(time, Yref)
+        d2plot.plot_flat_output_trajectory_chrono(time, Yref)
     if show_Xref:
         aircraft, windfield = ddd.Aircraft(), dg.WindField()
         Wref = np.array([windfield.sample(_t, _l) for _t, _l in zip(time, Yref[:,0,:])])
-        XUref = [dg.DiffFlatness.state_and_input_from_output(Y, W)  for Y,W in zip(Yref, Wref)]
+        XUref = [dg.DiffFlatness.state_and_input_from_output(Y, W, aircraft)  for Y,W in zip(Yref, Wref)]
         Xref, Uref = np.array([_Xu[0] for _Xu in XUref]), [_Xu[1] for _Xu in XUref]
-        du.plot_trajectory_chrono(time, X=None, U=None, Xref=Xref, _f=None, _a=None)
+        d2plot.plot_trajectory_chrono(time, X=None, U=None, Xref=Xref, _f=None, _a=None)
     if show_2d:
-        du.plot_trajectory_2d(time, X=None, U=None, Yref=Yref, Xref=Xref)
+        d2plot.plot_trajectory_2d(time, X=None, U=None, Yref=Yref, Xref=Xref)
     plt.show()
 
 
@@ -39,12 +40,8 @@ def display_animation(traj):
     Yrefs = [Yref]
     windfield = dg.WindField([0, 0])
     Wref = np.array([windfield.sample(_t, _l) for _t, _l in zip(time, Yref[:,0,:])])
-    X, U = None, None
-    #Yref, Xref = None, None
-    #Yref = [Yref]
-    #Yrefs = [Yref1, Yref2]
-    Xref = None
-    anim = dda.animate(time, X, U, [Yref], Xref, title=f'trajectory: {traj.name}', extends=traj.extends)
+    X, U, Xref = None, None, None
+    anim = dda.animate(time, X, U, Yrefs, Xref, title=f'trajectory: {traj.name}', extends=traj.extends)
     return anim
 
 
@@ -62,7 +59,7 @@ def parse_command_line():
 
 def main():
     args = parse_command_line()
-    if args.list:
+    if args.list or not args.traj:
         ddtf.print_available()
         return
     try:
