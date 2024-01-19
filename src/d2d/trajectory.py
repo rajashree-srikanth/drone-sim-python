@@ -6,8 +6,7 @@ import math, numpy as np
 #
 
 #
-# Utility fonctions
-#
+# 1D Utility fonctions
 #
 # Scalar trajectories (aka 1D)
 # 
@@ -38,58 +37,6 @@ class SinOne:
                           -self.om**2*asa,
                           -self.om**3*aca])#,
                            #self.om**4*asa   ])
-
-
-#
-# We represent our trajectories as a pair of smooth functions of time
-#
-class Trajectory:
-    cx, cy, ncomp = np.arange(3)
-    nder = 3
-    def __init__(self): self.t0 = 0.
-    def get(self, t): return np.zeros((Trajectory.nder+1, Trajectory.ncomp))
-    def reset(self, t0): self.t0 = t0
-
-
-class TrajectoryLine(Trajectory):
-
-    def __init__(self, p1, p2, v=10., t0=0.):
-        self.p1, self.p2, self.v, self.t0 = np.asarray(p1), np.asarray(p2), v, t0 # ends, velocity, initial time
-        dep = self.p2-self.p1
-        self.length = np.linalg.norm(dep)   # length
-        self.un = dep/self.length           # unit vector
-        self.duration = self.length/self.v  # duration
-
-    def reset(self, t0): self.t0 = t0
-
-    def get(self, t):
-        Yc = np.zeros((Trajectory.nder+1, Trajectory.ncomp))
-        Yc[0,:3] = self.p1 + self.un*self.v*(t-self.t0)
-        Yc[1,:3] =           self.un*self.v
-        return Yc#Yc.T
-
-class TrajectoryCircle(Trajectory):
-    # sign of r specifies direction
-    def __init__(self, c=[30., 30.],  r=30., v=10., t0=0., alpha0=0, dalpha=2*np.pi):
-        self.c, self.r, self.v, self.t0 = np.asarray(c), r, v, t0 # mxm, m, m/s
-        self.alpha0, self.dalpha = alpha0, dalpha # rad
-        self.omega = self.v/self.r                # rad/s
-        self.duration = np.abs(r)*dalpha/v
-
-    def reset(self, t0): self.t0 = t0
-       
-    def get(self, t):
-        alpha = t * self.omega + self.alpha0
-        ca, sa = np.cos(alpha), np.sin(alpha)
-        p  = self.c+self.r*np.array([ca, sa])
-        p1 = self.omega*self.r*np.array([-sa, ca])
-        p2 = self.omega**2*self.r*np.array([-ca, -sa])
-        p3 = self.omega**3*self.r*np.array([ sa, -ca])
-        return np.array((p, p1, p2, p3))
-
-
-#
-# Min snap polynomial trajectories
 #
 def arr(k,n): # arangements a(k,n) = n!/k!
     a,i = 1,n
@@ -97,7 +44,7 @@ def arr(k,n): # arangements a(k,n) = n!/k!
         a *= i; i -= 1
     return a
 
-class PolynomialOne:
+class PolynomialOne: # Min snap polynomial trajectories
     def __init__(self, Y0, Y1, duration):
         self.duration = duration
         _der = len(Y0)    # number of time derivatives
@@ -134,11 +81,69 @@ class PolynomialOne:
                 Y[d] = v
         return Y
 
+
+# 2D+t trajectories
+# We represent them as a pair of smooth functions of time and  nder time derivatives
+#
+class Trajectory: # Trajectory base class
+    desc = ""
+    cx, cy, ncomp = np.arange(3)
+    nder = 3
+    extends = (0, 100, 0, 100)
+    def __init__(self): self.t0 = 0.
+    def get(self, t): return np.zeros((self.nder+1, self.ncomp))
+    def reset(self, t0): self.t0 = t0
+
+    def summarize(self):
+        r = f'{self.desc}\n'
+        r += f'duration: {self.duration:.2f}s\n'
+        r += f'extends: {self.extends}'
+        return r
+
+    
+class TrajectoryLine(Trajectory):
+
+    def __init__(self, p1, p2, v=10., t0=0.):
+        self.p1, self.p2, self.v, self.t0 = np.asarray(p1), np.asarray(p2), v, t0 # ends, velocity, initial time
+        dep = self.p2-self.p1
+        self.length = np.linalg.norm(dep)   # length
+        self.un = dep/self.length           # unit vector
+        self.duration = self.length/self.v  # duration
+
+    def reset(self, t0): self.t0 = t0
+
+    def get(self, t):
+        Yc = np.zeros((Trajectory.nder+1, Trajectory.ncomp))
+        Yc[0,:3] = self.p1 + self.un*self.v*(t-self.t0)
+        Yc[1,:3] =           self.un*self.v
+        return Yc#Yc.T
+
+class TrajectoryCircle(Trajectory):
+    # sign of r specifies direction
+    def __init__(self, c=[30., 30.],  r=30., v=10., t0=0., alpha0=0, dalpha=2*np.pi):
+        self.c, self.r, self.v, self.t0 = np.asarray(c), r, v, t0 # mxm, m, m/s
+        self.alpha0, self.dalpha = alpha0, dalpha # rad
+        self.omega = self.v/self.r                # rad/s
+        self.duration = np.abs(r)*dalpha/v
+
+    def reset(self, t0): self.t0 = t0
+       
+    def get(self, t):
+        alpha = (t-self.t0) * self.omega + self.alpha0
+        ca, sa = np.cos(alpha), np.sin(alpha)
+        p  = self.c+self.r*np.array([ca, sa])
+        p1 = self.omega*self.r*np.array([-sa, ca])
+        p2 = self.omega**2*self.r*np.array([-ca, -sa])
+        p3 = self.omega**3*self.r*np.array([ sa, -ca])
+        return np.array((p, p1, p2, p3))
+
+
+
 class MinSnapPoly(Trajectory):
     def __init__(self, Y00=[0, 0], Y10=[1, 0], duration=1.):
         self.duration = duration
-        Y0 = np.zeros((Trajectory.ncomp, Trajectory.nder+1))# [_x, _y, _z, _psi, _ylen]
-        if len(np.asarray(Y00).shape) == 1: # we only got zero order derivatives
+        Y0 = np.zeros((Trajectory.ncomp, Trajectory.nder+1))
+        if len(np.asarray(Y00).shape) == 1: # we only got zero order derivatives, we assume others are null
             Y0[:,0] = Y00
         else:
             Y0 = Y00
@@ -183,9 +188,13 @@ class CompositeTraj:
 class SpaceIndexedTraj(Trajectory):
     def __init__(self, geometry, dynamic):
         self.duration = dynamic.duration
+        self.extends = geometry.extends
         self._geom, self._dyn = geometry, dynamic
+        
 
-    def set_dyn(self, dyn): self._dyn = dyn
+    def set_dyn(self, dyn):
+        self._dyn = dyn
+        self.duration = dyn.duration
 
     def get(self, t):
         Yt = np.zeros((self._geom.nder+1, self._geom.ncomp))

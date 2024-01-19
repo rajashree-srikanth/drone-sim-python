@@ -90,6 +90,7 @@ def main():
         print('loading scenario: {}'.format(args.scen))
         scen, desc = dds.get(args.scen)
         print('  description: {}'.format(desc))
+        print(f'{scen.summarize()}')
     except KeyError:
         print('unknown scenario {}'.format(args.scen))
         return

@@ -1,6 +1,7 @@
 import numpy as np
 
 import d2d.trajectory as ddt
+import d2d.guidance as d2guid
 
 
 #
@@ -15,13 +16,13 @@ def register(T): trajectories[T.name] = (T.desc, T)
 def list_available():
     return ['{}: {}'.format(k,v[0]) for k,v in sorted(trajectories.items())]
 
-class TrajDefaultCircle(ddt.TrajectoryCircle):
-    name = "default_circle"
+class TrajCircle(ddt.TrajectoryCircle):
+    name = "circle"
     desc = "30m radius (30,30) centered circle"
     extends = (-10, 70, -10, 70) # _xmin, _xmax, _ymin, _ymax 
     def __init__(self):
         ddt.TrajectoryCircle.__init__(self, c=[30., 30.],  r=30., v=10., t0=0., alpha0=0, dalpha=2*np.pi)
-register(TrajDefaultCircle)
+register(TrajCircle)
 
 
 class TrajTwoLines(ddt.CompositeTraj):
@@ -83,7 +84,7 @@ class TrajWithIntro(ddt.CompositeTraj):
         intro = ddt.TrajectoryLine(Y0, Y1, v=v_line)
         #self.extends = (-50, 130, -30, 130)  # _xmin, _xmax, _ymin, _ymax
         ddt.CompositeTraj.__init__(self, [intro, traj])
-#register(TrajWithIntro) needs to be in a scenario
+# we don't register(TrajWithIntro) as it's not meant to be standalone, it needs to be in a scenario
 
 
 # TODO not sure what it is supposed to be
@@ -120,8 +121,9 @@ class TrajSlalom(ddt.Trajectory):
     name = "slalom"
     desc = "slalom"
     extends = (-10, 100, -10, 50)  # _xmin, _xmax, _ymin, _ymax
-    def __init__(self, p1=[0,20], p2=[100,20], v=10., t0=0.):
+    def __init__(self, p1=[0,20], p2=[100,20], v=10., t0=0., phi=0.):
         self.p1, self.p2, self.v, self.t0 = np.asarray(p1), np.asarray(p2), v, t0 # ends, velocity, initial time
+        self.phi = phi # sine phase
         dep = self.p2-self.p1
         self.length = np.linalg.norm(dep)   # length
         self.un = dep/self.length           # unit vector
@@ -132,8 +134,8 @@ class TrajSlalom(ddt.Trajectory):
         Yc[0,:] = self.p1 + self.un*self.v*(t-self.t0)
         Yc[1,:] =           self.un*self.v
 
-        a, om = 10., 1.
-        s, c = np.sin(om*(t-self.t0)), np.cos(om*(t-self.t0))
+        a, om = 10., 1.; alpha = om*(t-self.t0+self.phi)
+        s, c = np.sin(alpha), np.cos(alpha)
         y, yd, ydd, yddd = a*s, a*om*c, -a*om**2*s, -a*om**3*c
         Yc[0,1] += y
         Yc[1,1] += yd
@@ -154,7 +156,128 @@ class TrajSiDemo(ddt.SpaceIndexedTraj):
         ddt.SpaceIndexedTraj.__init__(self, geometry, dynamic)
         
 register(TrajSiDemo)
-         
+
+import scipy.interpolate as interpolate
+class TrajSpline(ddt.Trajectory):
+    name = "spline"
+    desc = "spline dev"
+    def __init__(self, waypoints=None, duration=None):
+        self.waypoints = waypoints or np.array([[0., 0.], [50, 50], [100, 0], [150, 50], [200, 0]])
+        if duration is None:
+            v = 10.
+            duration = np.sum(np.linalg.norm(self.waypoints[1:]-self.waypoints[:-1], axis=1))/v
+        self.duration = duration
+       
+        l = np.linspace(0, self.duration, len(self.waypoints))
+        self.splines = [interpolate.InterpolatedUnivariateSpline(l, self.waypoints[:,i], k=4) for i in range(2)]
+        #self.splines = [interpolate.InterpolatedUnivariateSpline(l, self.waypoints[:,i], k=3) for i in range(2)]
+        self.extends= [0, 200, -20, 80]
+
+    def get(self, t):
+        #l = np.fmod(t, self.duration)/self.duration
+        t = np.fmod(t, self.duration)
+        #Yl = np.zeros((self.nder+1, self.ncomp))
+        #Yl[0] = [self.splines[i](l) for i in range(2)]
+        Yl = np.array([self.splines[i].derivatives(t) for i in range(self.ncomp)])[:,:self.nder+1].T
+        return Yl
+
+        
+register(TrajSpline)
+
+class SplineOne:
+    def __init__(self, xs, ys):
+        self.nder=3
+        self.dyn = interpolate.InterpolatedUnivariateSpline(xs, ys, k=4)
+        #self.dyn = interpolate.UnivariateSpline(xs, ys, k=4, s=1.)
+        self.duration = xs[-1]
+    def get(self, t):
+        
+        return np.array(self.dyn.derivatives(t))[:self.nder+1].T
+
+
+class FooOne:
+    def __init__(self, xs, ys):
+        self.xs, self.ys = np.asarray(xs), np.asarray(ys)
+        self.dxs, self.dys = self.xs[1:]-self.xs[:-1], self.ys[1:]-self.ys[:-1]
+        self.ds = self.dys/self.dxs
+        self.duration = xs[-1]
+
+    def get(self, t):
+        _i = np.where(t >= self.xs)[0][-1]
+        return np.array([self.ys[_i] + (t-self.xs[_i])*self.ds[_i], self.ds[_i], 0, 0])
+
+    
+import matplotlib.pyplot as plt
+import d2d.ploting as d2plot
+class TrajSiSpline(ddt.SpaceIndexedTraj):
+    name = "sispline"
+    desc = "spline dev"
+    extends = (-10, 100, -10, 50)
+    def __init__(self, duration=30.):
+        print(duration)
+        #geometry = TrajSpline(waypoints=None, duration=1.)
+        geometry = ddt.TrajectoryCircle( c=[30., 30.],  r=30., v=2*np.pi*30., t0=0., alpha0=0, dalpha=3*np.pi/2)
+        dynamic = ddt.AffineOne(1./duration, 0., duration=duration)
+        ddt.SpaceIndexedTraj.__init__(self, geometry, dynamic)
+        print(self.duration)
+        self._dyn1 = self._dyn
+
+        windfield = d2guid.WindField([5, 0])
+        
+        self.ts = np.arange(0, self._dyn.duration, 0.5)
+        self.lambdas = [self._dyn.get(_t) for _t in self.ts]
+        self.lambdas = np.array(self.lambdas)[:, 0]
+        #self.lambdas = np.sin(ts/self.duration*np.pi/2)
+        self._dyn2 = SplineOne(self.ts, self.lambdas)
+        self.lambdas_dyn2 = np.array([self._dyn2.get(_t) for _t in self.ts])
+        npts = 10
+        xs = np.linspace(0, 30, npts)
+        vtarget = 10.
+        def err_fun(p):
+            ys = np.concatenate(([0.],np.cumsum(p)))
+            self.set_dyn(FooOne(xs, ys))
+            flat_out = np.array([self.get(_t) for _t in self.ts]) 
+            pos = flat_out[:,0]
+            vel_gnd = flat_out[:,1]
+            wind = np.array([windfield.sample(_t, _p) for _t, _p in zip(self.ts, pos)])
+            vel_air = vel_gnd - wind
+            vair = np.linalg.norm(vel_air, axis=1)
+            err = np.mean(np.square(vair-vtarget))
+            #err = np.mean(np.square(np.linalg.norm(vel_gnd, axis=1)-vtarget))
+            return err
+        import scipy.optimize
+        res = scipy.optimize.minimize(err_fun, [1./npts]*(npts-1))
+        ys = np.concatenate(([0.],np.cumsum(res.x)))
+        #self._dyn4 = FooOne(xs, ys)
+        self._dyn4 = SplineOne(xs, ys)
+                    
+        #self.plot()
+        plt.show()
+        
+
+    def plot(self):
+        _a = plt.gcf().subplots(2, 2)
+        self.set_dyn(self._dyn1)
+        dyn1 = [self._dyn.get(_t) for _t in self.ts]
+        _a[0,0].plot(self.ts, dyn1)
+        d2plot.decorate(_a[0,0], 'lambda')
+        v1 = [np.linalg.norm(self.get(_t)[1]) for _t in self.ts]
+        _a[1,0].plot(self.ts, v1)
+        d2plot.decorate(_a[1,0], 'v')
+
+        self.set_dyn(self._dyn4)
+        dyn3 = [self._dyn.get(_t) for _t in self.ts]
+        #_a[0,1].plot(ts, self.lambdas2)
+        _a[0,1].plot(self.ts, dyn3)
+        d2plot.decorate(_a[0,1], 'lambda2')
+        v3 = [np.linalg.norm(self.get(_t)[1]) for _t in self.ts]
+        _a[1,1].plot(self.ts, v3)
+        d2plot.decorate(_a[1,1], 'v2', min_yspan=0.1)
+        
+        
+register(TrajSiSpline)
+
+
 def print_available():
     print('Available trajectories:')
     for i, n in enumerate(list_available()):

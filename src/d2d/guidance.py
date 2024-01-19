@@ -10,7 +10,7 @@ from d2d.dynamic import Aircraft
 def norm_mpi_pi(v): return ( v + np.pi) % (2 * np.pi ) - np.pi
 
 class WindField:
-    def __init__(self, w=[0.,0]):
+    def __init__(self, w=[0.,0.]):
         self.w = w
     def sample(self, t, loc):
         return self.w

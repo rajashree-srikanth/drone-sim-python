@@ -8,7 +8,7 @@ from d2d.dynamic import Aircraft
 
 #
 #
-# We define a set of commonly used scenarios (vehicles, trajectories, wind, etc)
+# A set of commonly used scenarios (vehicles, trajectories, wind, etc)
 #
 #
 
@@ -25,15 +25,44 @@ class Scenario:
         # we expect time and trajs provided by children classes
         nv = len(self.trajs) # number of vehicles
         # we fill in some defaults
+        try: self.time
+        except AttributeError:
+            tf = np.max([traj.duration for traj in self.trajs]) # min?
+            self.time = np.arange(0., tf, _default_dt)
         try: self.aircrafts
         except AttributeError: self.aircrafts = [Aircraft() for i in range(nv)]
         try: self.perts
         except AttributeError: self.perts=[np.zeros((len(self.time), Aircraft.s_size)) for i in range(nv)]
+        try: self.windfield
+        except AttributeError: self.windfield = d2guid.WindField()
+        try: self.X0s
+        except AttributeError:
+            self.X0s = []
+            for ac, traj in zip(self.aircrafts, self.trajs):
+                t0 = self.time[0]; Yr = traj.get(t0)
+                W = self.windfield.sample(t0, Yr[0])
+                self.X0s.append(d2guid.DiffFlatness.state_and_input_from_output(Yr, W, ac)[0])
+        try: self.extends
+        except AttributeError: 
+            self.extends = (0., 100., 0., 100.)
+            self.autoscale()
 
+
+    def autoscale(self):
+        pmin, pmax = (np.float('inf'), np.float('inf')), (-np.float('inf'), -np.float('inf'))
+        for traj in self.trajs:
+            for t in self.time:
+                Yr = traj.get(t)
+                pmin, pmax = np.min([Yr[0], pmin], axis=0), np.max([Yr[0], pmax], axis=0)
+        extends = pmax-pmin; margin = 0.05* extends; pmin -= margin; pmax += margin
+        self.extends = (pmin[0], pmax[0], pmin[1], pmax[1])
+        #print(pmin, pmax)
+        
     def summarize(self):
         r = f'{len(self.trajs)} trajectories\n'
         r += f'duration: {self.time[-1]-self.time[0]:.2f}s\n'
         r += f'wind: {self.windfield.summarize()}'
+        r += f'extends: {self.extends}'
         return r
     
 class ScenLine(Scenario):
@@ -69,17 +98,20 @@ class ScenCircle(Scenario):
     desc = 'circle'
     def __init__(self, duration=None):
         Y0, Y1 = [0,25], [200, 25]
-        self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]
+        #self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]
+        self.trajs = [ddtf.TrajSiSpline(duration=20.)]
         self.extends = (-10, 75, -10, 75) # _xmin, _xmax, _ymin, _ymax
         #self.windfield = d2guid.WindField([0, 0])
         #self.windfield = d2guid.WindField([2.5, 0])
         self.windfield = d2guid.WindField([5, 0])
-        duration = duration or 30.
+        #duration = duration or 30.
+        #duration = duration or 30.
         #self.time = np.arange(0, duration, 0.01)
         self.time = np.arange(0, self.trajs[0].duration, 0.01)
-        if 1:
+        breakpoint()
+        if 0:
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 5.]] # for the 5m/s windfield
-        else:
+        if 0:
             self.X0s=[]
             ac = d2dyn.Aircraft()
             for traj in self.trajs:
@@ -88,13 +120,14 @@ class ScenCircle(Scenario):
                 W = self.windfield.sample(t0, Yr[0])
                 self.X0s.append(d2guid.DiffFlatness.state_and_input_from_output(Yr, W, ac)[0])
             self.X0s[0][0] += 5.; self.X0s[0][1] += -5.
-        self.perts = [np.zeros((len(self.time), d2dyn.Aircraft.s_size))]
-        self.perts[0][500,d2dyn.Aircraft.s_x]  =  10
-        self.perts[0][1000,d2dyn.Aircraft.s_y] = -10
+        if 0:
+            self.perts = [np.zeros((len(self.time), d2dyn.Aircraft.s_size))]
+            self.perts[0][500,d2dyn.Aircraft.s_x]  =  10
+            self.perts[0][1000,d2dyn.Aircraft.s_y] = -10
         Scenario.__init__(self)
 register(ScenCircle)
 
-class ScenSquare:
+class ScenSquare(Scenario):
     name = 'square'
     desc = 'square'
     def __init__(self):
@@ -103,6 +136,7 @@ class ScenSquare:
         self.windfield = d2guid.WindField()
         self.time = np.arange(0, 30., 0.01)
         self.X0s = [[0, 0, 0, 0, 10]]
+        Scenario.__init__(self)
 register(ScenSquare)
 
 
@@ -142,8 +176,8 @@ register(ScenMultiCircle2)
 
 
 
-class ScenLinePatrol(Scenario):
-    name = "linpat"
+class ScenPatrol(Scenario):
+    name = "patrol"
     desc = "The original 'Line Patrol' scenario"
     def __init__(self):
         traj1 = ddtf.TrajLineWithIntro(Y0=[0., 100.], Y1=[0., 50.], Y2=[200., 50.], r=25.)
@@ -160,11 +194,11 @@ class ScenLinePatrol(Scenario):
         self.time = np.arange(t0, t1, dt)
         Scenario.__init__(self)
         
-register(ScenLinePatrol)
+register(ScenPatrol)
 
-class ScenLinePatrol2(Scenario):
-    name = "linpat2"
-    desc = "The original 'Line Patrol' scenario 2"
+class ScenPatrol2(Scenario):
+    name = "patrol_2"
+    desc = "dev patrol"
     def __init__(self):
         traj1 = ddtf.TrajLineWithIntro(Y0=[0., 100.], Y1=[0., 50.], Y2=[100., 50.], r=25.)
         
@@ -181,7 +215,29 @@ class ScenLinePatrol2(Scenario):
         self.windfield = d2guid.WindField([0, 2.5])
         self.time = np.arange(0., 17.5, _default_dt)
         Scenario.__init__(self)
-register(ScenLinePatrol2)
+register(ScenPatrol2)
+
+class ScenPatrol3(Scenario):
+    name = "patrol_3"
+    desc = "dev patrol"
+    def __init__(self, nv=2):
+        self.trajs=[]   
+        for i in range(nv):
+            dy = 5*i; dx=dy/2
+            Y0, Y1 = [0,10+dy], [100-dx, 10+dy]
+            l1 = ddt.TrajectoryLine(Y0, Y1, v=10., t0=0.)
+            c1 = ddt.TrajectoryCircle(c=[100-dx, 40],  r=30.-dy, v=10., t0=0., alpha0=-np.pi/2, dalpha=np.pi)
+            if 1:
+                s2 = ddtf.TrajSlalom(p1=[100,60-dy], p2=[0,60-dy], v=10., t0=0., phi=np.pi/2)
+                self.trajs.append(ddt.CompositeTraj([l1, c1, s2]))
+            else:
+                self.trajs.append(ddt.CompositeTraj([l1, c1]))
+        #print(self.trajs[0].duration)    
+        #self.time = np.arange(0., 28., _default_dt)
+        self.windfield = d2guid.WindField([0, 5.])
+        Scenario.__init__(self)
+
+register(ScenPatrol3)
 
 
 class ScenOval:

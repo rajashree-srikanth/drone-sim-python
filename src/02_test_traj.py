@@ -22,7 +22,7 @@ def display_trajectory(traj, show_Yref=True, show_Xref=True, show_2d=True):
     if show_Yref:
         d2plot.plot_flat_output_trajectory_chrono(time, Yref)
     if show_Xref:
-        aircraft, windfield = ddd.Aircraft(), dg.WindField()
+        aircraft, windfield = ddd.Aircraft(), dg.WindField()#[5., 0])
         Wref = np.array([windfield.sample(_t, _l) for _t, _l in zip(time, Yref[:,0,:])])
         XUref = [dg.DiffFlatness.state_and_input_from_output(Y, W, aircraft)  for Y,W in zip(Yref, Wref)]
         Xref, Uref = np.array([_Xu[0] for _Xu in XUref]), [_Xu[1] for _Xu in XUref]
@@ -71,6 +71,7 @@ def main():
         print('loading trajectory: {}'.format(args.traj))
         traj, desc = ddtf.get(args.traj)
         print('  description: {}'.format(desc))
+        print(f'{traj.summarize()}')
     except KeyError:
         print('unknown trajectory {}'.format(args.traj))
         return

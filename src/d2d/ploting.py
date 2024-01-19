@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 import d2d.guidance as ddg
 import d2d.dynamic as ddd
 
+def ensure_yspan(ax, yspan):
+    ymin, ymax = ax.get_ylim()
+    if ymax-ymin < yspan:
+        ym =  (ymin+ymax)/2
+        ax.set_ylim(ym-yspan/2, ym+yspan/2)
+
 def decorate(ax, title=None, xlab=None, ylab=None, legend=None, xlim=None, ylim=None, min_yspan=None):
     ax.xaxis.grid(color='k', linestyle='-', linewidth=0.2)
     ax.yaxis.grid(color='k', linestyle='-', linewidth=0.2)
@@ -60,12 +66,12 @@ def plot_trajectory_chrono(time, X=None, U=None, Yref=None, Xref=None, _f=None, 
     if X is not None: _a[1,1].plot(time, X[:,ddd.Aircraft.s_va], label='aircraft')
     if Xref is not None: _a[1,1].plot(time, Xref[:, ddd.Aircraft.s_va], label='reference')
     if U is not None: _a[1,1].plot(time, (U[:,ddd.Aircraft.i_va]), label='setpoint')
-    decorate(_a[1,1], title='$v_a$', xlab='s', ylab='m/s', legend=True)
+    decorate(_a[1,1], title='$v_a$', xlab='s', ylab='m/s', legend=True, min_yspan=0.1)
 
     if X is not None: _a[2,0].plot(time, np.rad2deg(X[:,ddd.Aircraft.s_phi]), label='aircraft')
     if Xref is not None: _a[2,0].plot(time, np.rad2deg(Xref[:, ddd.Aircraft.s_phi]), label='reference')
     if U is not None: _a[2,0].plot(time, np.rad2deg(U[:,ddd.Aircraft.i_phi]), label='setpoint')
-    decorate(_a[2,0], title='$\phi$', xlab='s', ylab='deg', legend=True)
+    decorate(_a[2,0], title='$\phi$', xlab='s', ylab='deg', legend=True, min_yspan=0.1)
     if title is not None: _f.canvas.set_window_title(title)
     #_f.canvas.set_window_title('State trajectory')
     return _f, _a
