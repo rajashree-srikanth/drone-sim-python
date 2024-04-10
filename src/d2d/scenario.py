@@ -46,8 +46,10 @@ class Scenario:
         except AttributeError: 
             self.extends = (0., 100., 0., 100.)
             self.autoscale()
-
-
+        try: self.ppctl    # control specification - needs love
+        except AttributeError:
+            self.ppctl = False
+            
     def autoscale(self):
         pmin, pmax = (np.float('inf'), np.float('inf')), (-np.float('inf'), -np.float('inf'))
         for traj in self.trajs:
@@ -61,8 +63,9 @@ class Scenario:
     def summarize(self):
         r = f'{len(self.trajs)} trajectories\n'
         r += f'duration: {self.time[-1]-self.time[0]:.2f}s\n'
-        r += f'wind: {self.windfield.summarize()}'
-        r += f'extends: {self.extends}'
+        r += f'wind: {self.windfield.summarize()}\n'
+        extends = ''.join([f'{_e:.1f} ' for _e in self.extends])
+        r += f'extends: {extends}'
         return r
     
 class ScenLine(Scenario):
@@ -96,10 +99,13 @@ register(ScenLine2)
 class ScenCircle(Scenario):
     name = 'circle'
     desc = 'circle'
-    def __init__(self, duration=None):
+    def __init__(self, duration=None, cst_gvel=False):
         Y0, Y1 = [0,25], [200, 25]
-        #self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]
-        self.trajs = [ddtf.TrajSiSpline(duration=20.)]
+        if cst_gvel:
+            self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]
+        else:  # cst air vel:
+            self.trajs = [ddtf.TrajSiSpline(duration=20.)]
+        
         self.extends = (-10, 75, -10, 75) # _xmin, _xmax, _ymin, _ymax
         #self.windfield = d2guid.WindField([0, 0])
         #self.windfield = d2guid.WindField([2.5, 0])
@@ -108,7 +114,8 @@ class ScenCircle(Scenario):
         #duration = duration or 30.
         #self.time = np.arange(0, duration, 0.01)
         self.time = np.arange(0, self.trajs[0].duration, 0.01)
-        breakpoint()
+
+        #breakpoint()
         if 0:
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 5.]] # for the 5m/s windfield
         if 0:
@@ -148,8 +155,8 @@ class ScenMultiCircle(Scenario):
         self.extends = (0, 80, 10, 90) # _xmin, _xmax, _ymin, _ymax
         #self.X0s = [[0, 0, 0, 0, 10], [0, 2, 0, 0, 10], [0, 4, 0, 0, 10], [0, 6, 0, 0, 10], [0, 8, 0, 0, 10]]
         #self.X0s = [[75, 50, np.pi/2, 0, 10], [85, 50, np.pi/2, 0, 10], [75, 60, np.pi/2, 0, 10]]
-        self.X0s = [[75-5*i, 50+7.5*i, np.pi/2+i*np.deg2rad(15), 0, v] for i in range(nc)]
-        self.X0s = [[75-5*i, 50+10*i, np.pi, 0, 10] for i in range(nc)]
+        #self.X0s = [[75-5*i, 50+7.5*i, np.pi/2+i*np.deg2rad(15), 0, v] for i in range(nc)]
+        self.X0s = [[75-5*i, 60+5*i, np.pi, 0, 10] for i in range(nc)]
         self.windfield = d2guid.WindField([5, 0])
         t0, t1, dt = 0, 20, 0.01
         self.time = np.arange(t0, t1, dt)
@@ -160,9 +167,9 @@ register(ScenMultiCircle)
 class ScenMultiCircle2(Scenario):
     name = "mucir2"
     desc = "2 circles (30m radius, x offset)"
-    def __init__(self):
+    def __init__(self, dx=0):
         traj1 = ddt.TrajectoryCircle(c=[40., 50.], alpha0=np.deg2rad(0.))
-        traj2 = ddt.TrajectoryCircle(c=[50., 50.], alpha0=np.deg2rad(30.))
+        traj2 = ddt.TrajectoryCircle(c=[40.+dx, 50.], alpha0=np.deg2rad(30.))
         self.trajs = [traj1, traj2]
         self.extends = (0, 100, 0, 100) # _xmin, _xmax, _ymin, _ymax
         self.X0s = [[75, 50, np.pi/2, 0, 10], [85, 70, np.pi/1.5, 0, 10]]
@@ -238,6 +245,22 @@ class ScenPatrol3(Scenario):
         Scenario.__init__(self)
 
 register(ScenPatrol3)
+
+
+
+class ScenCircularFormation(Scenario):
+    name = "circForm"
+    desc = "circular formation"
+    def __init__(self):
+        P0s = [[30,10], [25, 5]]
+        self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]*len(P0s)
+        Scenario.__init__(self)
+        for P0, X0 in zip(P0s, self.X0s):
+            X0[:Aircraft.s_y+1] = P0
+        self.ppctl = True
+    
+register(ScenCircularFormation)
+    
 
 
 class ScenOval:

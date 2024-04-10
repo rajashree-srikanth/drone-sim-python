@@ -208,6 +208,44 @@ class SpaceIndexedTraj(Trajectory):
         #Yt[4, :] = _lambda[4]*_g[:,1] + (3*_lambda[2]**2+4*_lambda[1]*_lambda[3])*_g[:,2] + 6*_lambda[1]**2*_lambda[2]*_g[:,3] + _lambda[1]**4*_g[:,4]
         return Yt
 
+
+
+## Let's make a controller instead
+# class CircularFormationTraj(Trajectory):
+
+
+# #   "ids": [102, 103, 104],
+# #   "topology": [
+# #     [ 1, 0],
+# #     [-1, 1],
+# #     [ 0,-1]
+# #   ],
+# #   "desired_intervehicle_angles_degrees": [0, 0],
+# #   "gain": 10,
+# #   "desired_stationary_radius_meters": 80
+# # }
+
+
+
+#     def __init__(self, c=[30., 30.],  r=30., v=10., t0=0., alpha0=0, dalpha=2*np.pi):
+#         self.c, self.r, self.v, self.t0 = np.asarray(c), r, v, t0 # mxm, m, m/s
+#         self.alpha0, self.dalpha = alpha0, dalpha # rad
+#         self.omega = self.v/self.r                # rad/s
+#         self.duration = np.abs(r)*dalpha/v
+        
+
+#     def reset(self, t0): self.t0 = t0
+       
+#     def get(self, t):
+#         alpha = (t-self.t0) * self.omega + self.alpha0
+#         ca, sa = np.cos(alpha), np.sin(alpha)
+#         p  = self.c+self.r*np.array([ca, sa])
+#         p1 = self.omega*self.r*np.array([-sa, ca])
+#         p2 = self.omega**2*self.r*np.array([-ca, -sa])
+#         p3 = self.omega**3*self.r*np.array([ sa, -ca])
+#         return np.array((p, p1, p2, p3))
+
+
     
 import matplotlib.pyplot as plt
 def check_si(traj):

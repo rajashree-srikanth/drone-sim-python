@@ -29,11 +29,13 @@ def run_simulation(time, aircraft, windfield, ctl, X0, perts):
     U[-1] = ctl.get(X[-1], time[-1])
     return X, U, Yref
 
-def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra):
+def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
     windfield = scen.windfield
     aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))]
-    #ctls = [ddg.PurePursuitControler(traj) for traj in scen.trajs]
-    ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)]
+    if scen.ppctl:
+        ctls = [ddg.PurePursuitControler(traj) for traj in scen.trajs]
+    else:
+        ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)]
     #np.set_printoptions(precision=2, linewidth=600)
    
     Xs, Us, Yrefs = [], [], []
@@ -50,9 +52,12 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra):
         
     if show_anim:
         extra = [np.array(ctl.carrot), np.array(ctl.ref_pos)] if show_extra else None
-        anim = dda.animate(scen.time, Xs, Us, Yrefs, Xref=None, Extra=extra, title=f'Simulation (scen {scen.name})', extends=scen.extends)
+        anim = dda.animate(scen.time, Xs, Us, Yrefs, Xref=None, Extra=extra, title=f'Simulation (scen {scen.name})', extends=scen.extends, windfield=scen.windfield)
         #dda.save_anim('/home/poine/tmp/foo.gif', anim, 0.01)
-        #dda.save_anim('/tmp/foo.apng', anim, 0.01)
+        if save:
+            #dda.save_anim('/tmp/foo.apng', anim, 0.01)
+            dda.save_anim(save, anim, 0.01)
+        #dda.save_anim('/home/poine/tmp/foo.gif', anim, 0.01)
 
     else: anim=None
     return anim
@@ -67,13 +72,14 @@ def parse_command_line():
     parser.add_argument('--X', help='plot state', action='store_true', default=False)
     parser.add_argument('--Y', help='plot output', action='store_true', default=False)
     parser.add_argument('--list', help='list all available scenarios', action='store_true', default=False)
+    parser.add_argument('--save', help='filename for saving plot', default=None)
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_command_line()
-    if args.list:
+    if args.list or not args.scen:
         dds.print_available()
         return
     try:
@@ -91,7 +97,7 @@ def main():
         print('unknown scenario {}'.format(args.scen))
         return
     show_extra = False
-    anim = test_simulation(scen, args.X, args.twod, args.anim, show_extra)
+    anim = test_simulation(scen, args.X, args.twod, args.anim, show_extra, args.save)
     plt.show()
     
 if __name__ == "__main__":

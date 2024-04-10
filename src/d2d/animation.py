@@ -11,8 +11,20 @@ import time
 def plot_wind():
     pass
 
+class txt_field:
+    def __init__(self, ax):
+        x, y = 0.025, 0.72#0.87
+        self._text = ax.text(x, y, 'Hello', transform=ax.transAxes)
+    def update(self, Xs):
+        text = ''
+        for X in Xs:
+            x, y, psi, phi, v = X
+            text += f'$v_a$ {v:.1f} m/s $\phi$ {np.rad2deg(phi):.1f} deg\n'
+        self._text.set_text(text)
+        
+
 def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
-            title='Animation', _drawings=False, _imgs=True, figure=None, ax=None, extends=None):
+            title='Animation', _drawings=False, _imgs=True, figure=None, ax=None, extends=None, windfield=None):
     if extends is None: extends = (0, 100, 0, 100)
     _xmin, _xmax, _ymin, _ymax = extends
     time_factor = 1. # Nope :(2.
@@ -27,6 +39,8 @@ def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
     ax.grid()
     time_template = 'time = {:0.1f}s'
     time_text = ax.text(0.025, 0.92, 'Hello', transform=ax.transAxes)
+    status_text = txt_field(ax)
+
     marker_acs, marker_refs, marker_extras = [], [], []
     if Yrefs is not None:
         for i, Yref in enumerate(Yrefs):
@@ -50,7 +64,7 @@ def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
         for _l in marker_acs:  _l.set_data([], [])
         for _l in marker_refs:  _l.set_data([], [])
         for _l in marker_extras:  _l.set_data([], [])
-        return [time_text] + marker_acs + marker_refs + marker_extras
+        return [time_text, status_text._text] + marker_acs + marker_refs + marker_extras
 
     def _get_points(x,y,psi,l=0.5):
         _c = np.array([x, y])                             # center of gravity
@@ -68,6 +82,9 @@ def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
                 x, y, psi, phi, v = X[int(i*_decim), :]
                 pts = _get_points(x,y,psi,l=0.5)
                 _l.set_data(pts)
+            Xis = [_X[int(i*_decim)] for _X in Xs]
+            status_text.update(Xis)
+
         if Yrefs is not None:
             for _l, Yref in zip(marker_refs, Yrefs):
                 xr, yr = Yref[int(i*_decim), :][0]
@@ -78,8 +95,10 @@ def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
                 xr, yr = extra[int(i*_decim)]
                 _l.set_data(_get_points2(xr, yr))
             
-        time_text.set_text(time_template.format(i*_decim * dt))
-        return [time_text] + marker_acs + marker_refs + marker_extras
+
+        w = windfield.sample(0, [0,0]) if windfield is not None else '[N/A]'
+        time_text.set_text(time_template.format(i*_decim * dt)+ f' wind {w} m/s')
+        return [time_text, status_text._text] + marker_acs + marker_refs + marker_extras
 
     dt = time[1]-time[0]
     dt_mili = dt*1000*_decim

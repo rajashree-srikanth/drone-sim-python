@@ -46,6 +46,76 @@ class DiffFlatness:
         return X, U, Xdot
 
 
+import control
+
+class DFFFController:
+    def __init__(self, traj, ac, wind):
+        self.traj, self.ac, self.wind = traj, ac, wind
+        self.dt = 0.01
+        self.time = np.arange(0, traj.duration, self.dt)
+        self.carrot, self.ref_pos = [0,0], [0,0]
+        self.Xref = []
+        self.K = []
+        
+    def get(self, X, t):
+        Yref = self.traj.get(t)
+        W = self.wind.sample(t, Yref[0])
+        Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
+        self.Xref.append(Xr)
+        dX = X - Xr
+        dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
+        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
+        dX = np.clip(dX, -err_sats, err_sats)
+        if 0:
+            A, B = self.ac.cont_jac(Xr, Ur, t, W)
+            #val_p, vect_p = np.linalg.eig(A)
+            #print(val_p)
+            Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
+            (K, X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
+        else:
+            A, B = self.ac.cont_jac(Xr, Ur, t, W)
+            A1,B1 = A[:3,:3], A[:3,3:]
+            Q, R = [1, 1, 0.1], [8, 1]
+            (K1, X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
+            K=np.zeros((2,5))
+            K[:,:3]=K1
+            #breakpoint()
+            
+            
+        self.K.append(K)
+        #valp2, vectp2 =  np.linalg.eig(A-np.dot(B, K))
+        dU = -np.dot(K, dX)
+        U = U1 = Ur + dU
+        phisat, vmin, vmax = np.deg2rad(45), 4, 20
+        U = np.clip(U, [-phisat, vmin], [phisat, vmax])
+        #print(valp2, K, U1, U)
+        return U
+
+    def draw_debug(self, _f, _a, time):
+        Xref = np.array(self.Xref)
+        _a[0,0].plot(time, Xref[:,0])
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+#
+#  old stuff, initial 2D pure pursuit
+#
+
+
 class VelControler:
     def __init__(self):
         self.Kp, self.Ki = 2., 0.001
@@ -107,42 +177,3 @@ class PurePursuitControler:
 
     
 
-import control
-
-class DFFFController:
-    def __init__(self, traj, ac, wind):
-        self.traj, self.ac, self.wind = traj, ac, wind
-        self.dt = 0.01
-        self.time = np.arange(0, traj.duration, self.dt)
-        self.carrot, self.ref_pos = [0,0], [0,0]
-        self.Xref = []
-        self.K = []
-        
-    def get(self, X, t):
-        Yref = self.traj.get(t)
-        W = self.wind.sample(t, Yref[0])
-        Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
-        self.Xref.append(Xr)
-        dX = X - Xr
-        dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
-        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
-        dX = np.clip(dX, -err_sats, err_sats)
-        A, B = self.ac.cont_jac(Xr, Ur, t, W)
-        val_p, vect_p = np.linalg.eig(A)
-        #print(val_p)
-        Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
-        #breakpoint()
-        (K, X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
-        self.K.append(K)
-        valp2, vectp2 =  np.linalg.eig(A-np.dot(B, K))
-        dU = -np.dot(K, dX)
-        U = U1 = Ur + dU
-        phisat, vmin, vmax = np.deg2rad(45), 4, 20
-        U = np.clip(U, [-phisat, vmin], [phisat, vmax])
-        #print(valp2, K, U1, U)
-        return U
-
-    def draw_debug(self, _f, _a, time):
-        Xref = np.array(self.Xref)
-        _a[0,0].plot(time, Xref[:,0])
-        
