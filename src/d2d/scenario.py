@@ -252,12 +252,13 @@ class ScenCircularFormation(Scenario):
     name = "circForm"
     desc = "circular formation"
     def __init__(self):
-        P0s = [[30,10], [25, 5]]
-        self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]*len(P0s)
+        P0s = [[30,10], [40, 10]]
+        self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2+i*np.pi/6) for i, P0 in enumerate(P0s)]
         Scenario.__init__(self)
         for P0, X0 in zip(P0s, self.X0s):
             X0[:Aircraft.s_y+1] = P0
-        self.ppctl = True
+        self.ppctl = False#True
+        self.windfield = d2guid.WindField([0, 5.])
     
 register(ScenCircularFormation)
     

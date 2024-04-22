@@ -163,7 +163,7 @@ class MinSnapPoly(Trajectory):
         return Yc.T
 
 
-class CompositeTraj:
+class CompositeTraj(Trajectory):
     def __init__(self, steps):
         self.steps = steps
         self.steps_dur = [s.duration for s in self.steps]
