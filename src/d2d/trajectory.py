@@ -94,6 +94,15 @@ class Trajectory: # Trajectory base class
     def get(self, t): return np.zeros((self.nder+1, self.ncomp))
     def reset(self, t0): self.t0 = t0
 
+    def compute_extends(self, dt = 0.1):
+        ts = np.arange(self.t0, self.t0 + self.duration, dt)
+        Ys = np.array([self.get(t) for t in ts])
+        p0, p1 = np.min(Ys[:,0], axis=0).round(1), np.max(Ys[:,0], axis=0).round(1)
+        margin = [1, 1]
+        p0 -= margin; p1 += margin
+        self.extends = (p0[0], p1[0], p0[1], p1[1])
+        #breakpoint()
+    
     def summarize(self):
         r = f'{self.desc}\n'
         r += f'duration: {self.duration:.2f}s\n'
@@ -184,6 +193,14 @@ class CompositeTraj(Trajectory):
         return Yc
 
 
+
+class TabulatedTraj(Trajectory):
+    def __init__(self, filename='/tmp/optyplan.npz'):
+        pass
+
+    def get(self, t):
+        return np.zeros((self.nder+1, self.ncomp))
+    
 
 class SpaceIndexedTraj(Trajectory):
     def __init__(self, geometry, dynamic):

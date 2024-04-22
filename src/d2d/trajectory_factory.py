@@ -2,7 +2,7 @@ import numpy as np
 
 import d2d.trajectory as ddt
 import d2d.guidance as d2guid
-
+import d2d.utils as d2u
 
 #
 #
@@ -143,6 +143,34 @@ class TrajSlalom(ddt.Trajectory):
         Yc[3,1] += yddd
         return Yc#Yc.T
 register(TrajSlalom) 
+
+
+class TrajTabulated(ddt.Trajectory):
+    name = "tabulated"
+    desc = "tabulated"
+    extends = (-5, 25, -10, 20)  # _xmin, _xmax, _ymin, _ymax
+    def __init__(self, filename='./optyplan.npz'):
+        _data =  np.load(filename)
+        labels = ['sol_time', 'sol_x', 'sol_y', 'sol_psi', 'sol_phi', 'sol_v', 'wind']
+        self.sol_time, self.sol_x, self.sol_y, self.sol_psi, self.sol_phi, self.sol_v, self.wind = [_data[k] for k in labels]
+        print(f'loaded {filename}')
+        self.t0 = 0.
+        self.duration = self.sol_time[-1]
+        self.compute_extends()
+
+    def get(self, t):
+        Yc = np.zeros((self.nder+1, self.ncomp))
+        idx = np.argmin(t>self.sol_time)
+        Yc[0,0] = self.sol_x[idx] 
+        Yc[0,1] = self.sol_y[idx]
+        (wx, wy), v, psi = self.wind[idx], self.sol_v[idx], self.sol_psi[idx]
+        Yc[1,0] = v * np.cos(psi) + wx
+        Yc[1,1] = v * np.sin(psi) + wy
+        #breakpoint()
+        return Yc
+
+register(TrajTabulated) 
+
 
 
 class TrajSiDemo(ddt.SpaceIndexedTraj):
