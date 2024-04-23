@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+ Trajectory planning with Opty (direct collocation)
 """
 
-import sys, os, numpy as np, sympy as sym
+import sys, os, argparse
+import numpy as np, sympy as sym
 import matplotlib.pyplot as plt
 import collections
 
@@ -23,30 +25,7 @@ class WindField:
         return self.w
 
 
-
-# mean bank
-def obj_meanbank(free, _p):
-    phis = free[_p._slice_phi]
-    return _p.obj_scale/_p.num_nodes * np.sum(np.square(phis))
-def obj_grad_meanbank(free, _p):
-    grad = np.zeros_like(free)
-    phis = free[_p._slice_phi]
-    grad[_p._slice_phi] = _p.obj_scale/_p.num_nodes*2*phis
-    return grad
-
-# min bank
-def obj_minbank(free, _p):
-    phis = free[_p._slice_phi]
-    return _p.obj_scale * np.max(np.square(phis))
-def obj_grad_minbank(free, _p):
-    grad = np.zeros_like(free)
-    phis = free[_p._slice_phi]
-    _i = np.argmax(np.square(phis))
-    grad[_i] = _p.obj_scale*2*phis[_i]
-    return grad
-
-
-class CostAirVel:
+class CostAirVel: # constant air velocity
     def __init__(self, vsp=10.):
         self.vsp = vsp
         
@@ -59,7 +38,22 @@ class CostAirVel:
         grad[_p._slice_v] = _p.obj_scale/_p.num_nodes*2*dvs
         return grad
 
-class CostObstacle:
+class CostBank:  # max bank or mean squared bank 
+
+    def cost(self, free, _p):
+        phis = free[_p._slice_phi]
+        #return _p.obj_scale * np.sum(np.square(phis))/_p.num_nodes
+        return _p.obj_scale * np.max(np.square(phis))
+    
+    def cost_grad(self, free, _p):
+        grad = np.zeros_like(free)
+        phis = free[_p._slice_phi]
+        #grad[_p._slice_phi] = _p.obj_scale/_p.num_nodes*2*phis
+        _i = np.argmax(np.square(phis))
+        grad[_p._slice_phi][_i] = _p.obj_scale*2*phis[_i]
+        return grad
+
+class CostObstacle: # penalyze circular obstacle
     def __init__(self, c=(30,0), r=15.):
         self.c, self.r = c, r
 
@@ -82,7 +76,7 @@ class CostObstacle:
         grad[_p._slice_y] =  _p.obj_scale/_p.num_nodes*-2.*dys*es
         return grad
 
-class CostObstacles:
+class CostObstacles: # penalyze set of circular obstacles
     def __init__(self, obss):
         self.obss = [CostObstacle(c=(_o[0], _o[1]), r=_o[2]) for _o in obss]
         
@@ -93,28 +87,19 @@ class CostObstacles:
         return np.sum([_c.cost_grad(free, _p) for _c in self.obss], axis=0)
 
 
-class CostVelObstacles:
-    def __init__(self, obss, vsp=10., kobs=1., kvel=1.):
-        self.kobs, self.kvel = kobs, kvel
+class CostComposit: # a mix of the above
+    def __init__(self, obss, vsp=10., kobs=1., kvel=1., kbank=1.):
+        self.kobs, self.kvel, self.kbank = kobs, kvel, kbank
         self.cobs = CostObstacles(obss)
         self.cvel = CostAirVel(vsp)
+        self.cbank = CostBank()
 
     def cost(self, free, _p):
-        return self.kobs*self.cobs.cost(free, _p) + self.kvel*self.cvel.cost(free, _p)
+        return self.kobs*self.cobs.cost(free, _p) + self.kvel*self.cvel.cost(free, _p) + self.kbank*self.cbank.cost(free, _p)
 
     def cost_grad(self, free, _p):
-        return self.kobs*self.cobs.cost_grad(free, _p) + self.kvel*self.cvel.cost_grad(free, _p)
+        return self.kobs*self.cobs.cost_grad(free, _p) + self.kvel*self.cvel.cost_grad(free, _p) + self.kbank*self.cbank.cost_grad(free, _p)
         
-k_vel = 0.5
-k_phi = 0.
-k_obs = 1.e-3
-def obj_compo2(free, _p):
-    return k_vel * obj_meanvel(free, _p) + k_phi * obj_meanbank(free, _p) + k_obs * obj_obs(free, _p)
-
-def obj_grad_compo2(free, _p):
-    return k_vel * obj_grad_meanvel(free, _p) + k_phi * obj_grad_meanbank(free, _p) + k_obs * obj_grad_obs(free, _p)
-
-
 
 
     
@@ -135,12 +120,7 @@ class SymAircraft:
 
     
 class Planner:
-    def __init__(self,
-                 exp,
-#                 _x_constraint = (-100, 100),
-#                 _y_constraint = (-100, 100),
-                 initialize=True
-                 ):
+    def __init__(self, exp, initialize=True):
         self.obj_scale = exp.obj_scale
         duration  = exp.t1 - exp.t0
         self.num_nodes = int(duration*exp.hz)+1
@@ -179,14 +159,15 @@ class Planner:
             #else:
             #    self._bounds[_g._sy(_g._st)-12.] = (-13., 23.)
 
-        #if _x_constraint is not None: self._bounds[_g._sx(_g._st)] = _x_constraint
-        #if _y_constraint is not None: self._bounds[_g._sy(_g._st)] = _y_constraint
+        if exp.x_constraint is not None: self._bounds[_g._sx(_g._st)] = exp.x_constraint
+        if exp.y_constraint is not None: self._bounds[_g._sy(_g._st)] = exp.y_constraint
+        
 
         self.obstacles = exp.obstacles
-        for _o in self.obstacles:
-            cx, cy, rm = _o
-            d2s = np.square(_g._sx(_g._st)-cx)+np.square(_g._sy(_g._st)-cy)
-            #self._bounds[d2s] = (np.square(rm), np.square(rM))
+        #for _o in self.obstacles:
+        #    cx, cy, rm = _o
+        #    d2s = np.square(_g._sx(_g._st)-cx)+np.square(_g._sy(_g._st)-cy)
+        #    #self._bounds[d2s] = (np.square(rm), np.square(rM))
         
         obj = exp.cost
         if initialize:
@@ -278,14 +259,15 @@ def plot2d(_p):
     _a.axis('equal')
 
 class exp_0:
-    cost = CostAirVel(12.)
     wind = WindField(w=[0.,0.])
+    cost = CostAirVel(12.)
     obstacles = ( )
     obj_scale = 1.
     t0, p0 = 0.,  ( 0.,  0.,    0.,    0., 10.)    # initial position: t0, ( x0, y0, psi0, phi0, v0)
     t1, p1 = 10., ( 0., 30., np.pi,    0., 10.)    # final position
     phi_constraint = (-np.deg2rad(30.), np.deg2rad(30.))
     v_constraint = (7., 20.)
+    x_constraint, y_constraint = None, None
     hz = 50.
     name = 'exp0'
     
@@ -293,40 +275,77 @@ class exp_1(exp_0):
     #wind = WindField(w=[2.,0.])
     obstacles = ((30, 0, 15), )
     cost = CostObstacle((obstacles[0][0], obstacles[0][1]), obstacles[0][2])
+    #cost = CostBank()
     #obj_scale = 1.e1
     #t1 = 4.
     name = 'exp1'
 
 class exp_2(exp_0):
-    #wind = WindField(w=[0.,0.])
     obstacles = ((33, 0, 15), (23, 30, 12))
     #cost = CostObstacles(obstacles)
-    cost = CostVelObstacles(obstacles, kobs=1., kvel=0.1)
+    cost = CostComposit(obstacles, 12., kobs=0.5, kvel=1e-6, kbank=10.)
     #obj_scale = 1.
+    phi_constraint = (-np.deg2rad(60.), np.deg2rad(60.))
     t1 = 11.
     name = 'exp2'
 
 class exp_3(exp_0):
-    #cost = (obj_minvel, obj_grad_minvel)
-    #obstacles = ((15, 10, 11, 1000), (35, -10, 11, 1000))
-    #obj_scale = 1e-5
-    pass
+    obstacles = ((33, 0, 15), (23, 30, 12))
+    cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=0.75, kbank=1.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    #t1 = 14.
+    y_constraint = (-10., 60.)
+    name = 'exp3'
 
-def main(force_recompute=False, exp=exp_2):
-    _p = Planner(exp, initialize = force_recompute)
+class exp_4(exp_0):
+    t1, p1 = 10., ( 100., 0., 0,    0., 10.)    # final position
+    obstacles = ((25, 0, 15), (55, 5, 12), (80, -10, 12))
+    cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    #t1 = 14.
+    name = 'exp4'
+
+class exp_5(exp_0):
+    t0, p0 =  0., ( -10., 10., 0,   0., 10.)    # 
+    t1, p1 = 10., ( 100., 70., 0,   0., 10.)    # final position
+    obstacles = []
+    for i in range(5):
+        for j in range(5):
+            obstacles.append((i*20., j*20., 7.5))
+    cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=10., kbank=1.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    #t1 = 14.
+    name = 'exp5'
+
+exps = [exp_0, exp_1, exp_2, exp_3, exp_4, exp_5]
+    
+def parse_command_line():
+    parser = argparse.ArgumentParser(description='Trajectory planning.')
+    parser.add_argument('--traj', help='the name of the trajectory', default=None)
+    parser.add_argument('--force', help='force recompute', action='store_true', default=False)
+    parser.add_argument('--list', help='list all known trajectories', action='store_true', default=False)
+    args = parser.parse_args()
+    return args
+    
+def main():
+    args = parse_command_line()
+    if args.list or not args.traj:
+        print(exps)
+        return
+    try:
+        traj_idx = int(args.traj)
+        exp = exps[traj_idx]
+    except ValueError:
+        pass
+
+    _p = Planner(exp, initialize = args.force)
     print('Planner initialized')
-    #filename = './optyplan.npz'
-    compute_or_load(_p, force_recompute, f'./optyplan_{exp.name}.npz', tol=1e-9, max_iter=3000, initial_guess=None) # 1e-5
+    compute_or_load(_p, args.force, f'./optyplan_{exp.name}.npz', tol=1e-5, max_iter=1500, initial_guess=None) # 1e-5
     print('Planner ran')
     plot(_p)
     plot2d(_p)
     plt.show()
 
-
-    
-
-
-
     
 if __name__ == '__main__':
-    main(force_recompute='--force' in sys.argv)
+    main()
