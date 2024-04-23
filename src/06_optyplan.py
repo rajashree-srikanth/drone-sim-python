@@ -147,21 +147,11 @@ class Planner:
         # nope self._instance_constraints += (_g._sx(_g._st) < 30, )
                                       
         # Bounds
-        if 0:
-            self._bounds = {_g._sphi(_g._st): exp.phi_constraint, #(_min_bank, _max_bank),
-                        _g._sv(_g._st): exp.v_constraint}     #(_min_v, _max_v),
-        else:
-            self._bounds = {}
-            self._bounds[_g._sphi(_g._st)] = exp.phi_constraint
-            self._bounds[_g._sv(_g._st)] = exp.v_constraint
-            #if 0:
-            #    self._bounds[_g._sy(_g._st)] = (-1., 35.)
-            #else:
-            #    self._bounds[_g._sy(_g._st)-12.] = (-13., 23.)
-
+        self._bounds = {}
+        self._bounds[_g._sphi(_g._st)] = exp.phi_constraint
+        self._bounds[_g._sv(_g._st)] = exp.v_constraint
         if exp.x_constraint is not None: self._bounds[_g._sx(_g._st)] = exp.x_constraint
         if exp.y_constraint is not None: self._bounds[_g._sy(_g._st)] = exp.y_constraint
-        
 
         self.obstacles = exp.obstacles
         #for _o in self.obstacles:
@@ -276,7 +266,7 @@ class exp_1(exp_0):
     obstacles = ((30, 0, 15), )
     cost = CostObstacle((obstacles[0][0], obstacles[0][1]), obstacles[0][2])
     #cost = CostBank()
-    #obj_scale = 1.e1
+    obj_scale = 1.e1
     #t1 = 4.
     name = 'exp1'
 
@@ -291,10 +281,11 @@ class exp_2(exp_0):
 
 class exp_3(exp_0):
     obstacles = ((33, 0, 15), (23, 30, 12))
-    cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=0.75, kbank=1.)
+    cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=2., kbank=2.)
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
     #t1 = 14.
     y_constraint = (-10., 60.)
+    obj_scale = 1.e-2
     name = 'exp3'
 
 class exp_4(exp_0):
@@ -302,19 +293,24 @@ class exp_4(exp_0):
     obstacles = ((25, 0, 15), (55, 5, 12), (80, -10, 12))
     cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
-    #t1 = 14.
+    obj_scale = 1.e-2
+    y_constraint = (-20., 20.)
     name = 'exp4'
 
 class exp_5(exp_0):
-    t0, p0 =  0., ( -10., 10., 0,   0., 10.)    # 
-    t1, p1 = 10., ( 100., 70., 0,   0., 10.)    # final position
+    t0, p0 =  0., ( -10., 10., 0,   0., 10.)    # start position 
+    t1, p1 = 10., ( 100., 70., 0,   0., 10.)    # end position
     obstacles = []
     for i in range(5):
         for j in range(5):
             obstacles.append((i*20., j*20., 7.5))
-    cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=10., kbank=1.)
+    if 1:
+        cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=10., kbank=1.)
+    else:
+        cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=10., kbank=1.)
+        obj_scale = 1.e-4
+        t1 = 15.
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
-    #t1 = 14.
     name = 'exp5'
 
 exps = [exp_0, exp_1, exp_2, exp_3, exp_4, exp_5]
