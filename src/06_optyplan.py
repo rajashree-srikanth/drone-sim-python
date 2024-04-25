@@ -242,14 +242,26 @@ def compute_or_load(_p, force_recompute=False, filename='/tmp/optyplan.npz', tol
 def plot(_p, save):
     fig, axes = plt.subplots(5, 1)
     axes[0].plot(_p.sol_time, _p.sol_x)
+    if _p.exp.x_constraint is not None:
+        p0, dx, dy = (_p.exp.t0, _p.exp.x_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.x_constraint[1]-_p.exp.x_constraint[0]
+        axes[0].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
     d2p.decorate(axes[0], title='x', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
     axes[1].plot(_p.sol_time, _p.sol_y)
+    if _p.exp.x_constraint is not None:
+        p0, dx, dy = (_p.exp.t0, _p.exp.y_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.y_constraint[1]-_p.exp.y_constraint[0]
+        axes[1].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
     d2p.decorate(axes[1], title='y', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
     axes[2].plot(_p.sol_time, np.rad2deg(_p.sol_psi))
     d2p.decorate(axes[2], title='$\\psi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
     axes[3].plot(_p.sol_time, np.rad2deg(_p.sol_phi))
+    if _p.exp.phi_constraint is not None:
+        p0, dx, dy = (_p.exp.t0, np.rad2deg(_p.exp.phi_constraint[0])), _p.exp.t1-_p.exp.t0, np.rad2deg(_p.exp.phi_constraint[1]-_p.exp.phi_constraint[0])
+        axes[3].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
     d2p.decorate(axes[3], title='$\\phi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
     axes[4].plot(_p.sol_time, _p.sol_v)
+    if _p.exp.v_constraint is not None:
+        p0, dx, dy = (_p.exp.t0, _p.exp.v_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.v_constraint[1]-_p.exp.v_constraint[0]
+        axes[4].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
     d2p.decorate(axes[4], title='$v$', xlab='t in s', ylab='m/s', legend=None, xlim=None, ylim=None, min_yspan=0.1)
     if save is not None:
         fn = f'{save}_chrono.png'
@@ -279,6 +291,7 @@ def plot2d(_p, save):
         print(f'saved {fn}'); plt.savefig(fn)
 
 class exp_0:
+    tol, max_iter = 1e-5, 1500
     wind = WindField(w=[0.,0.])
     cost = CostAirVel(12.)
     obstacles = ( )
@@ -287,7 +300,7 @@ class exp_0:
     t1, p1 = 10., ( 0., 30., np.pi,    0., 10.)    # final position
     x_constraint, y_constraint = None, None
     phi_constraint = (-np.deg2rad(30.), np.deg2rad(30.))
-    v_constraint = (7., 20.)
+    v_constraint = (9., 12.)
     hz = 50.
     name = 'exp0'
     
@@ -310,12 +323,16 @@ class exp_2(exp_0):
     name = 'exp2'
 
 class exp_3(exp_0):
+    tol, max_iter = 1e-5, 3000
     obstacles = ((33, 0, 15), (23, 30, 12))
     cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=2., kbank=2.)
-    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
-    #t1 = 14.
-    y_constraint = (-10., 60.)
+    #cost = CostComposit(obstacles, vsp=12., kobs=1., kvel=1., kbank=0.5)
+    #cost = CostComposit(obstacles, vsp=14., kobs=0.2, kvel=0.1, kbank=2.)
     obj_scale = 1.e-2
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    v_constraint = (9., 15.)
+    #t1 = 16.
+    x_constraint, y_constraint = (-5., 60.), (-1., 51.)
     name = 'exp3'
 
 class exp_4(exp_0):
@@ -420,7 +437,7 @@ def main():
 
     _p = Planner(exp, initialize = args.force)
     print('Planner initialized')
-    compute_or_load(_p, args.force, f'./optyplan_{exp.name}.npz', tol=1e-5, max_iter=1500, initial_guess=None) # 1e-5
+    compute_or_load(_p, args.force, f'./optyplan_{exp.name}.npz', tol=exp.tol, max_iter=exp.max_iter, initial_guess=None) # 1e-5
     print('Planner ran')
     plot(_p, args.save)
     plot2d(_p, args.save)
