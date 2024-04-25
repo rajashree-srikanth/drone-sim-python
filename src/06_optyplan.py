@@ -121,6 +121,7 @@ class SymAircraft:
     
 class Planner:
     def __init__(self, exp, initialize=True):
+        self.exp = exp
         self.obj_scale = exp.obj_scale
         duration  = exp.t1 - exp.t0
         self.num_nodes = int(duration*exp.hz)+1
@@ -178,7 +179,20 @@ class Planner:
         self.prob.addOption('tol', tol)            # default 1e-8
         self.prob.addOption('max_iter', max_iter)  # default 3000
 
-
+    def get_initial_guess(self):
+        initial_guess = np.random.randn(self.prob.num_free)
+        if 1: # random positions
+            cx, cy = self.exp.x_constraint, self.exp.y_constraint
+            if cx is not None:
+                initial_guess[self._slice_x] = np.random.default_rng().uniform(cx[0],cx[1],self.num_nodes)
+            if cy is not None:
+                initial_guess[self._slice_y] = np.random.default_rng().uniform(cy[0],cy[1],self.num_nodes)
+        if 0:
+            p0, p1 = self.exp.p0[:2], self.exp.p1[:2] 
+            initial_guess[self._slice_x] = np.linspace(p0[0], p1[0], self.num_nodes)
+            initial_guess[self._slice_y] = np.linspace(p0[1], p1[1], self.num_nodes)
+        return initial_guess
+        
     def run(self, initial_guess=None):
         # Use a random positive initial guess.
         initial_guess = np.random.randn(self.prob.num_free) if initial_guess is None else initial_guess
@@ -196,7 +210,6 @@ class Planner:
         
     def save_solution(self, filename):
         wind = np.array([self.wind.sample_num(_t, _x, _y) for _t, _x, _y in zip(self.sol_time, self.sol_x, self.sol_y)])
-        #breakpoint()
         np.savez(filename, sol_time=self.sol_time, sol_x=self.sol_x, sol_y=self.sol_y,
                  sol_psi=self.sol_psi, sol_phi=self.sol_phi, sol_v=self.sol_v, wind=wind)
         print('saved {}'.format(filename))
@@ -214,6 +227,7 @@ def compute_or_load(_p, force_recompute=False, filename='/tmp/optyplan.npz', tol
     if force_recompute or not os.path.exists(filename):
         print(f'{filename} { os.path.exists(filename)}')
         _p.configure(tol, max_iter)
+        initial_guess = _p.get_initial_guess()
         _p.run(initial_guess)
         if 1:
             _p.prob.plot_objective_value()
@@ -225,7 +239,7 @@ def compute_or_load(_p, force_recompute=False, filename='/tmp/optyplan.npz', tol
 
 
 
-def plot(_p):
+def plot(_p, save):
     fig, axes = plt.subplots(5, 1)
     axes[0].plot(_p.sol_time, _p.sol_x)
     d2p.decorate(axes[0], title='x', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
@@ -237,16 +251,32 @@ def plot(_p):
     d2p.decorate(axes[3], title='$\\phi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
     axes[4].plot(_p.sol_time, _p.sol_v)
     d2p.decorate(axes[4], title='$v$', xlab='t in s', ylab='m/s', legend=None, xlim=None, ylim=None, min_yspan=0.1)
+    if save is not None:
+        fn = f'{save}_chrono.png'
+        print(f'saved {fn}'); plt.savefig(fn)
     
-def plot2d(_p):
-     
+def plot2d(_p, save):
     _f = plt.figure()
     _a = plt.gca()
-    _a.plot(_p.sol_x, _p.sol_y)
+    _a.plot(_p.sol_x, _p.sol_y, solid_capstyle='butt')
+    #p0, p1 = (_p.sol_x[0], _p.sol_y[0]), (_p.sol_x[-1], _p.sol_y[-1])
+    dx, dy = _p.sol_x[-1]-_p.sol_x[-2], _p.sol_y[-1]-_p.sol_y[-2]
+    #dx *= 10; dy *= 10
+    _a.arrow(_p.sol_x[-1], _p.sol_y[-1], dx, dy, head_width=0.5,head_length=1)
+    _a.add_patch(plt.Circle((_p.sol_x[0], _p.sol_y[0]), 0.5))
     for _o in _p.obstacles:
         cx, cy, rm = _o
-        _a.add_patch(plt.Circle((cx,cy),rm, alpha=0.25))
+        _a.add_patch(plt.Circle((cx,cy),rm, color='r', alpha=0.1))
+    if _p.exp.y_constraint is not None:
+        if _p.exp.x_constraint is not None:
+            p0 = (_p.exp.x_constraint[0], _p.exp.y_constraint[0])
+            dx = _p.exp.x_constraint[1]-_p.exp.x_constraint[0]
+            dy = _p.exp.y_constraint[1]-_p.exp.y_constraint[0]
+            _a.add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
     _a.axis('equal')
+    if save is not None:
+        fn = f'{save}_2d.png'
+        print(f'saved {fn}'); plt.savefig(fn)
 
 class exp_0:
     wind = WindField(w=[0.,0.])
@@ -255,9 +285,9 @@ class exp_0:
     obj_scale = 1.
     t0, p0 = 0.,  ( 0.,  0.,    0.,    0., 10.)    # initial position: t0, ( x0, y0, psi0, phi0, v0)
     t1, p1 = 10., ( 0., 30., np.pi,    0., 10.)    # final position
+    x_constraint, y_constraint = None, None
     phi_constraint = (-np.deg2rad(30.), np.deg2rad(30.))
     v_constraint = (7., 20.)
-    x_constraint, y_constraint = None, None
     hz = 50.
     name = 'exp0'
     
@@ -290,20 +320,22 @@ class exp_3(exp_0):
 
 class exp_4(exp_0):
     t1, p1 = 10., ( 100., 0., 0,    0., 10.)    # final position
-    obstacles = ((25, 0, 15), (55, 5, 12), (80, -10, 12))
+    obstacles = ((25, 0, 15), (55, 7.5, 12), (80, -10, 12))
     cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
     obj_scale = 1.e-2
-    y_constraint = (-20., 20.)
+    x_constraint = (-5., 105.)
+    y_constraint = (-15., 25.) #(-20., 20.)
     name = 'exp4'
 
 class exp_5(exp_0):
-    t0, p0 =  0., ( -10., 10., 0,   0., 10.)    # start position 
-    t1, p1 = 10., ( 100., 70., 0,   0., 10.)    # end position
+    t0, p0 =  0., (   0., 40., 0,   0., 10.)    # start position 
+    t1, p1 = 12., ( 100., 40., 0,   0., 10.)    # end position
     obstacles = []
     for i in range(5):
         for j in range(5):
-            obstacles.append((i*20., j*20., 7.5))
+            if (i+j)%2:
+                obstacles.append((i*20., j*20., 10.))
     if 1:
         cost = CostComposit(obstacles, vsp=15., kobs=0.5, kvel=10., kbank=1.)
     else:
@@ -313,13 +345,65 @@ class exp_5(exp_0):
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
     name = 'exp5'
 
-exps = [exp_0, exp_1, exp_2, exp_3, exp_4, exp_5]
+class exp_6_0(exp_0):
+    t0, p0 =  0., (   0.,  0., np.pi/2, 0., 10.)    # start position 
+    t1, p1 = 12., ( 100., 40., 0,       0., 10.)    # end position
+    name = 'exp6_0'
+class exp_6_1(exp_0):
+    t0, p0 =  0., (  10., 10., np.pi/2, 0., 10.)    # start position 
+    t1, p1 = 12., ( 100., 42., 0,   0., 10.)    # end position
+    name = 'exp6_1'
+class exp_6_2(exp_0):
+    t0, p0 =  0., (  20., 20., np.pi/2, 0., 10.)    # start position 
+    t1, p1 = 12., ( 100., 44., 0,   0., 10.)    # end position
+    name = 'exp6_2'
+
+class exp_7_0(exp_0):
+    obstacles = ((10, 20, 5), (40, 30, 5), (70, 20, 5))
+    cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=2., kbank=0.)
+    obj_scale = 1.e-3
+    x_constraint, y_constraint = (-5., 105.), (-1., 51.)
+    t0, t1 = 0., 16.
+    p0 = (   0.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 40., 0,       0., 10.)    # end position
+    name = 'exp7_0'
+class exp_7_1(exp_7_0):
+    p0 = (  10.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 42., 0,       0., 10.)    # end position
+    name = 'exp7_1'
+class exp_7_2(exp_7_0):
+    p0 = (  20.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 44., 0,       0., 10.)    # end position
+    name = 'exp7_2'    
+class exp_7_3(exp_7_0):
+    p0 = (  30.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 46., 0,       0., 10.)    # end position
+    name = 'exp7_3'    
+class exp_7_4(exp_7_0):
+    p0 = (  40.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 48., 0,       0., 10.)    # end position
+    name = 'exp7_4'    
+class exp_8(exp_0):
+    obstacles = ((10, 20, 5), (40, 30, 5), (70, 20, 5))
+    cost = CostComposit(obstacles, vsp=14., kobs=0.1, kvel=2., kbank=0.)
+    obj_scale = 1.e-3
+    x_constraint, y_constraint = (-5., 105.), (-1., 51.)
+    t0, t1 = 0., 30.
+    p0 = (   0.,  0., np.pi/2, 0., 10.)    # start position 
+    p1 = ( 100., 40., 0,       0., 10.)    # end position
+    name = 'exp_8'
+    
+exps = [exp_0, exp_1, exp_2, exp_3, exp_4, exp_5,
+        exp_6_0, exp_6_1, exp_6_2,
+        exp_7_0, exp_7_1, exp_7_2, exp_7_3, exp_7_4,
+        exp_8]
     
 def parse_command_line():
     parser = argparse.ArgumentParser(description='Trajectory planning.')
     parser.add_argument('--traj', help='the name of the trajectory', default=None)
     parser.add_argument('--force', help='force recompute', action='store_true', default=False)
     parser.add_argument('--list', help='list all known trajectories', action='store_true', default=False)
+    parser.add_argument('--save', help='save plot', action='store', default=None)
     args = parser.parse_args()
     return args
     
@@ -338,8 +422,8 @@ def main():
     print('Planner initialized')
     compute_or_load(_p, args.force, f'./optyplan_{exp.name}.npz', tol=1e-5, max_iter=1500, initial_guess=None) # 1e-5
     print('Planner ran')
-    plot(_p)
-    plot2d(_p)
+    plot(_p, args.save)
+    plot2d(_p, args.save)
     plt.show()
 
     

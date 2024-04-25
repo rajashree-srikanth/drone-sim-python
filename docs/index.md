@@ -21,7 +21,7 @@ Perform a formation flight like aerobatics patrols do. For example fly in a V sh
   - Theoretical:
     
 	- 3D+t guidance
-	- online path planning (for initial rendez-vous)
+	- online [trajectory planning](planning) (for initial rendez-vous)
     - verification that a trajectory is possible to fly (given a wind field)
 	- modify the trajectory to adapt to changing wind conditions
 
@@ -33,3 +33,4 @@ We begin with a [planar simplification](planar_instance) of the problem as depic
 
 <!--<img src="plots/2d_traj1.gif" alt="Planar MIP simulation plot" width="640">-->
 <img src="plots/2d_traj1.apng" alt="PVTOL pole simulation plot" width="640">
+

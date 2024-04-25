@@ -37,7 +37,7 @@ def test_scenario(scen, show_Yref, show_Xref, show_anim, show_2d):
             if 0: # check vadot: yes
                 _a[2,1].plot(scen.time, Xrefdot[:, Aircraft.s_va], label='df')
                 _a[2,1].plot(scen.time, 100*np.gradient(Xref[:, Aircraft.s_va]), alpha=0.5, label='numeric')
-                d2plot.decorate(_a[2,1], title='$\dot{v}_a$', legend=True)
+                d2plot.decorate(_a[2,1], title='$\\dot{v}_a$', legend=True)
             if 1: # check psidot: yes
                 _a[2,1].plot(scen.time, Xrefdot[:, Aircraft.s_psi], label='df')
                 psi_dot_num = 100*np.gradient(Xref[:, Aircraft.s_psi])
@@ -45,7 +45,7 @@ def test_scenario(scen, show_Yref, show_Xref, show_anim, show_2d):
                     if abs(psi_dot_num[i]) > 10:psi_dot_num[i]= psi_dot_num[i-1]
                 _a[2,1].plot(scen.time, psi_dot_num, alpha=0.5, label='numeric')
                 #_a[2,1].set_ylim(-0.5, 0.5)
-                d2plot.decorate(_a[2,1], title='$\dot{\psi}$', legend=True)
+                d2plot.decorate(_a[2,1], title='$\\dot{\\psi}$', legend=True)
             
     if show_2d:
         _f, _a = None, None
@@ -95,6 +95,9 @@ def main():
         print('unknown scenario {}'.format(args.scen))
         return
     anim = test_scenario(scen, show_Yref=args.Y, show_Xref=args.X, show_anim=args.anim, show_2d=args.twod)
+    if 1:
+        save='/tmp/optyplan_5.apng'
+        dda.save_anim(save, anim, 0.01)
     plt.show()
     
 if __name__ == "__main__":

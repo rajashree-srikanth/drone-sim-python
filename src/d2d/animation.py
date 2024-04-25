@@ -19,7 +19,7 @@ class txt_field:
         text = ''
         for X in Xs:
             x, y, psi, phi, v = X
-            text += f'$v_a$ {v:.1f} m/s $\phi$ {np.rad2deg(phi):.1f} deg\n'
+            text += f'$v_a$ {v:.1f} m/s $\\phi$ {np.rad2deg(phi):.1f} deg\n'
         self._text.set_text(text)
         
 
@@ -35,7 +35,7 @@ def animate(time, Xs=None, U=None, Yrefs=None, Xref=None, Extra=None,
                              ylim=(_ymin, _ymax), facecolor=(0.5, 0.9, 0.9))
     if title is not None:
         ax.set_title(title, {'fontsize': 20 })
-        fig.canvas.set_window_title(title)
+        #fig.canvas.set_window_title(title)
     ax.grid()
     time_template = 'time = {:0.1f}s'
     time_text = ax.text(0.025, 0.92, 'Hello', transform=ax.transAxes)

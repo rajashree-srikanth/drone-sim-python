@@ -149,7 +149,7 @@ class TrajTabulated(ddt.Trajectory):
     name = "tabulated"
     desc = "tabulated"
     extends = (-5, 25, -10, 20)  # _xmin, _xmax, _ymin, _ymax
-    def __init__(self, filename='./optyplan.npz'):
+    def __init__(self, filename='./optyplan_exp0.npz'):
         _data =  np.load(filename)
         labels = ['sol_time', 'sol_x', 'sol_y', 'sol_psi', 'sol_phi', 'sol_v', 'wind']
         self.sol_time, self.sol_x, self.sol_y, self.sol_psi, self.sol_phi, self.sol_v, self.wind = [_data[k] for k in labels]

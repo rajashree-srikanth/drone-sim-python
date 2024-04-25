@@ -51,7 +51,7 @@ class Scenario:
             self.ppctl = False
             
     def autoscale(self):
-        pmin, pmax = (np.float('inf'), np.float('inf')), (-np.float('inf'), -np.float('inf'))
+        pmin, pmax = (float('inf'), float('inf')), (-float('inf'), -float('inf'))
         for traj in self.trajs:
             for t in self.time:
                 Yr = traj.get(t)
@@ -181,8 +181,6 @@ class ScenMultiCircle2(Scenario):
 register(ScenMultiCircle2)
 
 
-
-
 class ScenPatrol(Scenario):
     name = "patrol"
     desc = "The original 'Line Patrol' scenario"
@@ -264,7 +262,7 @@ register(ScenCircularFormation)
     
 
 
-class ScenOval:
+class ScenOval(Scenario):
     name = "oval"
     desc = "oval"
     def __init__(self):
@@ -277,7 +275,30 @@ class ScenOval:
         
 register(ScenOval)
 
+class ScenDualOpty(Scenario):
+    name = "dual opty"
+    desc = "dual opty"
+    def __init__(self):
+       self.trajs = [ddtf.TrajTabulated('optyplan_exp6_0.npz'),
+                     ddtf.TrajTabulated('optyplan_exp6_1.npz'),
+                     ddtf.TrajTabulated('optyplan_exp6_2.npz')]
+       Scenario.__init__(self)
+        
+register(ScenDualOpty)
 
+class ScenOpty2(Scenario):
+    name = "opty2"
+    desc = "opty2"
+    def __init__(self):
+       self.trajs = [ddtf.TrajTabulated('optyplan_exp7_0.npz'),
+                     ddtf.TrajTabulated('optyplan_exp7_1.npz'),
+                     ddtf.TrajTabulated('optyplan_exp7_2.npz'),
+                     ddtf.TrajTabulated('optyplan_exp7_3.npz'),
+                     ddtf.TrajTabulated('optyplan_exp7_4.npz')]
+       Scenario.__init__(self)
+        
+register(ScenOpty2)
+         
 def print_available():
     print('Available scenarios:')
     for i, n in enumerate(list_available()): print(f'{i} -> {n}')
