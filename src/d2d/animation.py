@@ -111,8 +111,8 @@ def save_anim(filename, an, dt):
     print('encoding animation video, please wait, it will take a while')
     _start = time.time()
     fps = 1./dt/4; print(f'dt {dt} fps {fps}')
-    an.save(filename, writer=animation.PillowWriter(fps=1./dt/4)) # gif?
-    _end = time.time()
-    print(f'video encoded, saved to {filename}, Bye (took {_end-_start:.1f} s)')
+    # an.save(filename, writer=animation.PillowWriter(fps=1./dt/4)) # gif?
+    # _end = time.time()
+    # print(f'video encoded, saved to {filename}, Bye (took {_end-_start:.1f} s)')
 
 

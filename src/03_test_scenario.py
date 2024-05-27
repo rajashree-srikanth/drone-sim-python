@@ -65,11 +65,11 @@ def test_scenario(scen, show_Yref, show_Xref, show_anim, show_2d):
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description='Plot a trajectory.')
-    parser.add_argument('--scen', help='the name of the scenario', default=None)
+    parser.add_argument('--scen', help='the name of the scenario', default=0)
     parser.add_argument('--anim', help='plot animation', action='store_true', default=False)
     parser.add_argument('--twod', help='plot 2d track', action='store_true', default=False)
     parser.add_argument('--X', help='plot state', action='store_true', default=False)
-    parser.add_argument('--Y', help='plot output', action='store_true', default=False)
+    parser.add_argument('--Y', help='plot output', action='store_true', default=True)
     parser.add_argument('--list', help='list all known trajectories', action='store_true', default=False)
     args = parser.parse_args()
     return args
@@ -77,7 +77,8 @@ def parse_command_line():
 
 def main():
     args = parse_command_line()
-    if args.list or not args.scen:
+    # if args.list or not args.scen:
+    if args.list:
         dds.print_available()
         return
     try:

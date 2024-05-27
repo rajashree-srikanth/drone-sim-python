@@ -35,7 +35,7 @@ def plot_trajectory_2d(time, X=None, U=None, Yref=None, Xref=None, _f=None, _a=N
     #breakpoint()
     decorate(_a, title='2D', legend=True)
     _a.axis('equal')
-    _f.canvas.set_window_title('2D trajectory')
+    # _f.canvas.set_window_title('2D trajectory')
     return _f, _a
 
 def plot_trajectories_chrono(time, Xs=None, Us=None, Yrefs=None, Xrefs=None, _f=None, _a=None, title=None):
@@ -84,7 +84,7 @@ def plot_flat_output_trajectory_chrono(time, Yref, _f=None, _a=None, label='ref'
         decorate(_a[_i,0], title=f'$x^{{({_i})}}$', xlab='s', ylab=f'$m/s^{{{_i}}}$', legend=True)
         _a[_i,1].plot(time, Yref[:,_i,ddg.Trajectory.cy], label=label)
         decorate(_a[_i,1], title=f'$y^{{({_i})}}$', xlab='s', ylab=f'$m/s^{{{_i}}}$', legend=True)
-    _f.canvas.set_window_title('Flat output trajectory')
+    # _f.canvas.set_window_title('Flat output trajectory')
     return _f, _a
 
 
