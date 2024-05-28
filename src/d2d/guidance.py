@@ -57,8 +57,9 @@ class DFFFController:
         self.Xref = []
         self.K = []
         
+    # the controller definition and how it works, or what it does    
     def get(self, X, t):
-        Yref = self.traj.get(t)
+        Yref = self.traj.get(t) 
         W = self.wind.sample(t, Yref[0])
         Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
         self.Xref.append(Xr)
@@ -91,22 +92,19 @@ class DFFFController:
         Xref = np.array(self.Xref)
         _a[0,0].plot(time, Xref[:,0])
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
+# gvf controller
+# generating the trajectory - for now, it is just a circle
+# a function to plot the trajectory we want
+# a function or module for the gvf controller
+# class GeneratePath:
+class CircleTraj:
+    def __init__(self):
+        pass
+    def circle(self):
+        
+class GVFcontroller:
+    def __init__(self):
+        self.
 #
 #  old stuff, initial 2D pure pursuit
 #

@@ -4,7 +4,7 @@ import math, numpy as np
 #
 # 2D+t trajectories
 #
-
+# basic simple trajectories like circle, line, etc.
 #
 # 1D Utility fonctions
 #
@@ -145,6 +145,7 @@ class TrajectoryCircle(Trajectory):
         p2 = self.omega**2*self.r*np.array([-ca, -sa])
         p3 = self.omega**3*self.r*np.array([ sa, -ca])
         return np.array((p, p1, p2, p3))
+    # computing position and their derivatives
 
 
 

@@ -7,7 +7,7 @@ import d2d.utils as d2u
 #
 #
 # A set of commonly used trajectories
-#
+# combination of the basic trajectories from trajectory.py
 #
 
 
@@ -144,7 +144,7 @@ class TrajSlalom(ddt.Trajectory):
         return Yc#Yc.T
 register(TrajSlalom) 
 
-
+# interpolation of trajectory based on given individual points
 class TrajTabulated(ddt.Trajectory):
     name = "tabulated"
     desc = "tabulated"

@@ -9,10 +9,11 @@ from d2d.dynamic import Aircraft
 #
 #
 # A set of commonly used scenarios (vehicles, trajectories, wind, etc)
+# combination of no of a/c, wind, controller, etc
 #
-#
-
+# _scenarios{} is private
 _scenarios = {}
+# allows to add to above dictionary - appends new scenario
 def register(S): _scenarios[S.name] = (S.desc, S)
 def list_available():
     return ['{}: {}'.format(k,v[0]) for k,v in sorted(_scenarios.items())]
@@ -37,7 +38,7 @@ class Scenario:
         except AttributeError: self.windfield = d2guid.WindField()
         try: self.X0s
         except AttributeError:
-            self.X0s = []
+            self.X0s = [] # initializes the state 
             for ac, traj in zip(self.aircrafts, self.trajs):
                 t0 = self.time[0]; Yr = traj.get(t0)
                 W = self.windfield.sample(t0, Yr[0])
@@ -113,12 +114,15 @@ class ScenCircle(Scenario):
         #duration = duration or 30.
         #duration = duration or 30.
         #self.time = np.arange(0, duration, 0.01)
-        self.time = np.arange(0, self.trajs[0].duration, 0.01)
+        self.time = np.arange(0, self.trajs[0].duration, 0.01) # time for scenario - time for only one trajectory
 
         #breakpoint()
-        if 0:
+        if 0: # if false
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 5.]] # for the 5m/s windfield
+            # intial state
         if 0:
+        # no initial pos specified - uses initial point from traj
+        # not excecuted    
             self.X0s=[]
             ac = d2dyn.Aircraft()
             for traj in self.trajs:
@@ -303,6 +307,7 @@ def print_available():
     print('Available scenarios:')
     for i, n in enumerate(list_available()): print(f'{i} -> {n}')
 
+# the scenario is built here
 def get(_name):
     return _scenarios[_name][1](), _scenarios[_name][0]
-
+# stores the name of the class
