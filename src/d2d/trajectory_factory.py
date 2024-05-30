@@ -14,7 +14,8 @@ import d2d.utils as d2u
 trajectories = {}
 def register(T): trajectories[T.name] = (T.desc, T)
 def list_available():
-    return ['{}: {}'.format(k,v[0]) for k,v in sorted(trajectories.items())]
+    # appends available trajectories to a dictionary
+    return ['{}: {}'.format(k,v[0]) for k,v in sorted(trajectories.items())] 
 
 class TrajCircle(ddt.TrajectoryCircle):
     name = "circle"
@@ -313,4 +314,8 @@ def print_available():
 
 def get(traj_name):
     return trajectories[traj_name][1](), trajectories[traj_name][0]
+# returns the trajecctory class, description of the trajectory class
+# trajectories is a dictionary, with each element indexed by a key, each containing 2 elements - 
+# (description of traj, calling of the class name of traj to be computed)
+
 

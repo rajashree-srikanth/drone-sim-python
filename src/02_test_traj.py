@@ -14,11 +14,13 @@ import d2d.animation as dda
 import d2d.trajectory as ddt
 import d2d.trajectory_factory as ddtf
 
-
+# traj is the object from trajectory/trajectory_factory.py
 def display_trajectory(traj, show_Yref=True, show_Xref=True, show_2d=True):
-    t0, t1, dt = 0, traj.duration, 0.01
-    time = np.arange(t0, t1, dt)
-    Yref = np.array([traj.get(t) for t in time])
+    t0, t1, dt = 0, traj.duration, 0.01 # time parameters
+    time = np.arange(t0, t1, dt) # all time instances
+    # obtains the position (x,y) of th required traj at each instant of time
+    Yref = np.array([traj.get(t) for t in time]) # we are calling the get() method 
+    # defined under the class name stored in the variable "traj"
     Xref = None
     if show_Yref:
         d2plot.plot_flat_output_trajectory_chrono(time, Yref)
@@ -59,17 +61,22 @@ def parse_command_line():
 
 
 def main():
+    # takes command line arguments
     args = parse_command_line()
     if args.list or not args.traj:
         ddtf.print_available()
         return
     try:
+        # trajectory index from input
         traj_idx = int(args.traj)
         args.traj = sorted(ddtf.trajectories.items())[traj_idx][0]
     except ValueError:
         pass
     try:
         print('loading trajectory: {}'.format(args.traj))
+        # get() fn from trajectory_factory.py is called - this function returns calling of
+        # the required traj, a description of the traj; and assigns them to traj and desc
+        # variables respectively. traj - instance of the reqd traj class 
         traj, desc = ddtf.get(args.traj)
         print('  description: {}'.format(desc))
         print(f'{traj.summarize()}')
@@ -79,6 +86,7 @@ def main():
     #ddt.check_si(traj)
     if args.anim:
         anim = display_animation(traj)
+    # the main part of the code that performs computation and other things
     display_trajectory(traj, show_Yref=args.Y, show_Xref=args.X, show_2d=args.twod)
     plt.show()
     

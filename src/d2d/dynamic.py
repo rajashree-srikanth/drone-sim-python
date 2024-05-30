@@ -4,7 +4,7 @@ import d2d.utils as d2u
 
 class Aircraft:
     i_phi, i_va, i_size = np.arange(3)
-    s_x, s_y, s_psi, s_phi, s_va, s_size = np.arange(6)
+    s_x, s_y, s_psi, s_phi, s_va, s_size = np.arange(6) # no. of states = 5
     s_slice_pos  = slice(s_x, s_y+1)
     g = 9.81
     def __init__(self):

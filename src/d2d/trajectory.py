@@ -86,25 +86,37 @@ class PolynomialOne: # Min snap polynomial trajectories
 # We represent them as a pair of smooth functions of time and  nder time derivatives
 #
 class Trajectory: # Trajectory base class
+    # initializes array to store trajectory and its derivatives for 
+    # a given duration of time and computes limits of extends
     desc = ""
     cx, cy, ncomp = np.arange(3)
-    nder = 3
-    extends = (0, 100, 0, 100)
-    def __init__(self): self.t0 = 0.
-    def get(self, t): return np.zeros((self.nder+1, self.ncomp))
-    def reset(self, t0): self.t0 = t0
+    nder = 3 # max no. of derviatives performed
+    extends = (0, 100, 0, 100) # limits of 
+    def __init__(self): 
+        self.t0 = 0.
+    def get(self, t): # initializing array of zeros that will store all derivatives of the trajectory
+        return np.zeros((self.nder+1, self.ncomp))
+    def reset(self, t0): 
+        self.t0 = t0
 
     def compute_extends(self, dt = 0.1):
-        ts = np.arange(self.t0, self.t0 + self.duration, dt)
-        Ys = np.array([self.get(t) for t in ts])
-        p0, p1 = np.min(Ys[:,0], axis=0).round(1), np.max(Ys[:,0], axis=0).round(1)
+        ts = np.arange(self.t0, self.t0 + self.duration, dt) # all time instants of computation
+        Ys = np.array([self.get(t) for t in ts]) # initializes array of derivatives of traj for all time instances, using list comprehension
+        # equivalent to:
+        # results = []
+        # for t in ts:
+        #     results.append(self.get(t)) 
+        # Ys = np.array(results)
+        # p0, p1 = np.min(Ys[:,0], axis=0).round(1), np.max(Ys[:,0], axis=0).round(1)
+        p0, p1 = np.min(Ys[:,0], axis=0), np.max(Ys[:,0], axis=0)
+        p0, p1 = p0.round(1), p1.round(1) # round off to one decimal place
         margin = [1, 1]
         p0 -= margin; p1 += margin
-        self.extends = (p0[0], p1[0], p0[1], p1[1])
+        self.extends = (p0[0], p1[0], p0[1], p1[1]) # setting limits of margin?
         #breakpoint()
     
     def summarize(self):
-        r = f'{self.desc}\n'
+        r = f'{self.desc}\n' # f'{}' is another way to concatenate strings
         r += f'duration: {self.duration:.2f}s\n'
         r += f'extends: {self.extends}'
         return r
@@ -114,7 +126,7 @@ class TrajectoryLine(Trajectory):
 
     def __init__(self, p1, p2, v=10., t0=0.):
         self.p1, self.p2, self.v, self.t0 = np.asarray(p1), np.asarray(p2), v, t0 # ends, velocity, initial time
-        dep = self.p2-self.p1
+        dep = self.p2-self.p1 
         self.length = np.linalg.norm(dep)   # length
         self.un = dep/self.length           # unit vector
         self.duration = self.length/self.v  # duration
@@ -122,6 +134,7 @@ class TrajectoryLine(Trajectory):
     def reset(self, t0): self.t0 = t0
 
     def get(self, t):
+        # computing for an instant of time
         Yc = np.zeros((Trajectory.nder+1, Trajectory.ncomp))
         Yc[0,:3] = self.p1 + self.un*self.v*(t-self.t0)
         Yc[1,:3] =           self.un*self.v

@@ -9,7 +9,7 @@ from d2d.dynamic import Aircraft
 
 def norm_mpi_pi(v): return ( v + np.pi) % (2 * np.pi ) - np.pi
 
-class WindField:
+class WindField: # initializes wind vel = 0 unless specifed in scenario
     def __init__(self, w=[0.,0.]):
         self.w = w
     def sample(self, t, loc):
@@ -97,17 +97,17 @@ class DFFFController:
 # a function to plot the trajectory we want
 # a function or module for the gvf controller
 # class GeneratePath:
-class CircleTraj:
-    def __init__(self):
-        pass
-    def circle(self):
+# class CircleTraj:
+#     def __init__(self):
+#         pass
+#     def circle(self):
         
-class GVFcontroller:
-    def __init__(self):
-        self.
-#
-#  old stuff, initial 2D pure pursuit
-#
+# class GVFcontroller:
+#     def __init__(self):
+#         self.
+# #
+# #  old stuff, initial 2D pure pursuit
+# #
 
 
 class VelControler:

@@ -17,23 +17,24 @@ import d2d.scenario as dds
 #
 # Dynamic Simulation
 #
-# running simulation for one a/c over the entire time period of simulation 
+# running simulation for one a/c over a time loop
 def run_simulation(time, aircraft, windfield, ctl, X0, perts):
     # intializing vectors for X - state, and U - input
     X,U = np.zeros((len(time), ddyn.Aircraft.s_size)), np.zeros((len(time), ddyn.Aircraft.i_size))
-    # Yref - reference traj (ref output)
-    Yref = np.array([ctl.traj.get(t) for t in time]) # get() function for the trajectory object
+    # Yref - reference traj (ref output) that the controller would follow
+    # get() function for the trajectory object returns trajectory
+    Yref = np.array([ctl.traj.get(t) for t in time]) 
     X[0] = X0 # initial state
     for i in range(1, len(time)):
-        # running controller for each time instant - ctl
+        # returns controller action U for each time instant - ctl
         U[i-1] = ctl.get(X[i-1], time[i-1])#, time) # get() for the controller object
         X[i] = aircraft.disc_dyn(X[i-1], U[i-1], windfield, time[i-1], time[i]-time[i-1])
         X[i] += perts[i]
     U[-1] = ctl.get(X[-1], time[-1])
     return X, U, Yref
 
+# main simulation loop - loops over no. of a/cs, scenario trajectories
 def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
-    # calls windfield in each scenario defined in py file
     windfield = scen.windfield
     aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))]
     if scen.ppctl:
@@ -41,7 +42,8 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
     else:
         # looping over each aircraft, under each traj (several traj together build up a scenario)
         ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)] # list comprehension
-        # appending controller to a list called ctls containng the controller objects for each a/c
+        # appending to a list called ctls - each element: DFFFController class is called and assigned as object
+        # each element of ctls - contains specific case for a traj, a/c and wind
     #np.set_printoptions(precision=2, linewidth=600)
    
     Xs, Us, Yrefs = [], [], []
