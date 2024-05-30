@@ -5,6 +5,8 @@ layout: default
 
 # 2D experiment
 
+<div class="section one" id="section1">
+</div>
 ## State Space representation
 
 We begin with a planar simplification of the problem defined as follow:
@@ -30,6 +32,8 @@ $$
 TODO: rigorously reestablish those equations, make a drawing, define notations and variable ranges.
 
 
+<div class="section one" id="section2">
+</div>
 ## Differential flatness
 For using \\( \vect{Y} = \transp{\begin{pmatrix}x&y\end{pmatrix}} \\) as flat input, we want to find \\(\Phi_1\\) and \\(\Phi_2\\) such as 
 
@@ -139,14 +143,15 @@ $$
 \end{equation}
 $$
 
-
+<div class="section one" id="section3">
+</div>
 ## Guidance
 
 Our control objective consist in following a trajectory \\( Y_r(t): C^3, \mathbb{R} -> \mathbb{R}^2 \\) while rejecting perturbation with an asymptoticaly stable dynamics.
 
 Differential Flattness can be used to compute state \\(X_r\\)  and input \\(U_r\\) corresponding to the flat output \\( Y_r \\)
 
-Tracking error \\( \epsilon = X - X_r \\) can be asymtoticaly stabilized used a linear feedbak, which leads to the following controller:
+Tracking error \\( \epsilon = X - X_r \\) can be asymtoticaly stabilized using a linear feedbak, which leads to the following controller:
 
 $$
 \begin{equation*}

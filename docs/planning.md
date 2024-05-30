@@ -6,11 +6,16 @@ layout: default
 
 ## Trajectory planning
 
-### Opty
+### 1: Opty
 
-[Repository github](https://github.com/csu-hmc/opty), [Documentation](https://opty.readthedocs.io/en/latest/theory.html)
+`opty utilizes symbolic descriptions of differential algebraic equations expressed with SymPy to form the constraints needed to solve optimal control and parameter identification problems using the direct collocation method and non-linear programming.`
 
-### Implémentation
+
+  * [Repository github](https://github.com/csu-hmc/opty)
+  * [Documentation](https://opty.readthedocs.io/stable/)
+  
+
+### 2: Single Vehicle Implémentation
    
 [06_optyplan.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/06_optyplan.py)
 
@@ -36,3 +41,9 @@ Constraints on state variables, obstacles (in cost function)
 Several independant planifications
 
 <img src="plots/optyplan_1.apng" alt="" width="640">
+
+
+### 3: Multiple Vehicles Implementation
+
+
+[07_multioptyplan.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/07_multioptyplan.py)
