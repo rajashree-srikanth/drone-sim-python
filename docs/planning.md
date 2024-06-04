@@ -15,10 +15,15 @@ layout: default
   * [Documentation](https://opty.readthedocs.io/stable/)
   
 
-### 2: Single Vehicle Implémentation
-   
-[06_optyplan.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/06_optyplan.py)
+### 2: Single Vehicle Implementation
 
+  * [d2d/opty_utils.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/d2d/opty_utils.py)
+	synbolic equations of motion, cost functions, plotting, etc...
+  * [d2d/optyplan_scenarios.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/d2d/optyplan_scenarios.py)
+	scenarios (experiments) 
+  * [06_optyplan.py](https://github.com/poine/projet_dronisos_guidage/blob/master/src/06_optyplan.py)
+	Planner
+	
 #### Example 0
 
   * Specification of start/end position and time

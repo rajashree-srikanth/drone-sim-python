@@ -3,6 +3,8 @@
 """
  Trajectory planning with Opty (direct collocation)
 """
+seed = None
+#seed = 12345
 
 #
 # TODO
@@ -22,13 +24,10 @@ import d2d.optyplan_scenarios as d2oscen
 
 class Planner:
     def __init__(self, exp, initialize=True):
-        self.exp = exp
-        self.obj_scale = exp.obj_scale
-        duration  = exp.t1 - exp.t0
-        self.num_nodes = int(duration*exp.hz)+1
-        self.interval_value = 1./exp.hz
-        self.duration  = (self.num_nodes-1)*self.interval_value#duration
-        print(f'solver: interval_value: {self.interval_value:.3f}s ({1./self.interval_value:.1f}hz)')
+        self.exp = exp                 # scenario
+        self.obj_scale = exp.obj_scale # cost function scaling
+        self.num_nodes, self.time_step, self.duration = d2ou.planner_timing(exp.t0, exp.t1, exp.hz)
+
         self.wind = exp.wind
         self.aircraft = _g = d2ou.Aircraft()
  
@@ -57,11 +56,6 @@ class Planner:
         if exp.y_constraint is not None: self._bounds[_g._sy(_g._st)] = exp.y_constraint
 
         self.obstacles = exp.obstacles
-        #for _o in self.obstacles:
-        #    cx, cy, rm = _o
-        #    d2s = np.square(_g._sx(_g._st)-cx)+np.square(_g._sy(_g._st)-cy)
-        #    #self._bounds[d2s] = (np.square(rm), np.square(rM))
-        
         obj = exp.cost
         if initialize:
             self.prob =  opty.direct_collocation.Problem(lambda _free: obj.cost(_free, self),
@@ -69,7 +63,7 @@ class Planner:
                                                          _g.get_eom(self.wind),
                                                          _g._state_symbols,
                                                          self.num_nodes,
-                                                         self.interval_value,
+                                                         self.time_step,
                                                          known_parameter_map=self._par_map,
                                                          instance_constraints=self._instance_constraints,
                                                          bounds=self._bounds,
@@ -81,16 +75,39 @@ class Planner:
         self.prob.addOption('tol', tol)            # default 1e-8
         self.prob.addOption('max_iter', max_iter)  # default 3000
 
-    def get_initial_guess(self):
-        initial_guess = np.random.randn(self.prob.num_free)
-        if 1: # random positions
+    def get_initial_guess(self, kind='tri'):
+        #initial_guess = np.random.randn(self.prob.num_free)
+        initial_guess = np.zeros(self.prob.num_free)
+        if kind=='rnd': # random positions
+            rng = np.random.default_rng(seed)
             cx, cy = self.exp.x_constraint, self.exp.y_constraint
-            if cx is not None:
-                initial_guess[self._slice_x] = np.random.default_rng().uniform(cx[0],cx[1],self.num_nodes)
-            if cy is not None:
-                initial_guess[self._slice_y] = np.random.default_rng().uniform(cy[0],cy[1],self.num_nodes)
-        if 0:
-            p0, p1 = self.exp.p0[:2], self.exp.p1[:2] 
+            if cx is None: cx = [-100, 100]
+            initial_guess[self._slice_x] = rng.uniform(cx[0],cx[1], self.num_nodes)
+            if cy is None: cy = [-100, 100]
+            initial_guess[self._slice_y] = rng.uniform(cy[0],cy[1],self.num_nodes)
+            initial_guess[self._slice_psi] = rng.uniform(-np.pi, np.pi,self.num_nodes)    
+        elif kind == 'tri': # equilateral triangle for arriving on time
+            p0, p1 = np.array(self.exp.p0[:2]), np.array(self.exp.p1[:2]) # start and end
+            p0p1 = p1-p0
+            d = np.linalg.norm(p0p1)        # distance between start and end
+            u = p0p1/d; v = np.array([-u[1], u[0]]) # unit and normal vectors
+            D = self.exp.vref*self.duration # distance to be traveled during scenario
+            p3 = p0 + p0p1/2
+            if D > d: # We have time to spare, let make an isocele triangle
+                p3 -= np.sqrt(D**2-d**2)/2*v
+            n1 = int(self.num_nodes/2); n2 = self.num_nodes - n1
+            _p0p3 = np.linspace(p0, p3, n1)
+            _p3p1 = np.linspace(p3, p1, n2)
+            _p0p1 = np.vstack((_p0p3, _p3p1))
+            initial_guess[self._slice_x] = _p0p1[:,0]
+            initial_guess[self._slice_y] = _p0p1[:,1]
+            p0p3 = p3-p0; psi0 = np.arctan2(p0p3[1], p0p3[0])
+            p3p1 = p1-p3; psi1 = np.arctan2(p3p1[1], p3p1[0])
+            initial_guess[self._slice_psi] = np.hstack((psi0*np.ones(n1), psi1*np.ones(n2)))
+            initial_guess[self._slice_v] = self.exp.vref
+            initial_guess[self._slice_phi] = np.zeros(self.num_nodes)
+        else: # straight line
+            p0, p1 = np.array(self.exp.p0[:2]), np.array(self.exp.p1[:2])
             initial_guess[self._slice_x] = np.linspace(p0[0], p1[0], self.num_nodes)
             initial_guess[self._slice_y] = np.linspace(p0[1], p1[1], self.num_nodes)
         return initial_guess
@@ -126,65 +143,6 @@ class Planner:
 
         
 
-def plot_chrono(_p, save, _f=None, _a=None):
-#    print(_f, _a)
-    if _f is None:
-        fig, axes = plt.subplots(5, 1)
-    else:
-        fig, axes = _f, _a
-#    print(fig, axes)
-    #breakpoint()
-    axes[0].plot(_p.sol_time, _p.sol_x)
-    if _p.exp.x_constraint is not None:
-        p0, dx, dy = (_p.exp.t0, _p.exp.x_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.x_constraint[1]-_p.exp.x_constraint[0]
-        axes[0].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
-    d2p.decorate(axes[0], title='x', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
-    axes[1].plot(_p.sol_time, _p.sol_y)
-    if _p.exp.x_constraint is not None:
-        p0, dx, dy = (_p.exp.t0, _p.exp.y_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.y_constraint[1]-_p.exp.y_constraint[0]
-        axes[1].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
-    d2p.decorate(axes[1], title='y', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
-    axes[2].plot(_p.sol_time, np.rad2deg(_p.sol_psi))
-    d2p.decorate(axes[2], title='$\\psi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
-    axes[3].plot(_p.sol_time, np.rad2deg(_p.sol_phi))
-    if _p.exp.phi_constraint is not None:
-        p0, dx, dy = (_p.exp.t0, np.rad2deg(_p.exp.phi_constraint[0])), _p.exp.t1-_p.exp.t0, np.rad2deg(_p.exp.phi_constraint[1]-_p.exp.phi_constraint[0])
-        axes[3].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
-    d2p.decorate(axes[3], title='$\\phi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
-    axes[4].plot(_p.sol_time, _p.sol_v)
-    if _p.exp.v_constraint is not None:
-        p0, dx, dy = (_p.exp.t0, _p.exp.v_constraint[0]), _p.exp.t1-_p.exp.t0, _p.exp.v_constraint[1]-_p.exp.v_constraint[0]
-        axes[4].add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
-    d2p.decorate(axes[4], title='$v_a$', xlab='t in s', ylab='m/s', legend=None, xlim=None, ylim=None, min_yspan=0.1)
-    if save is not None:
-        fn = f'{save}_chrono.png'
-        print(f'saved {fn}'); plt.savefig(fn)
-    return fig, axes
-    
-def plot2d(_p, save, _f=None, _a=None, label=''):
-    _f = _f or plt.figure()
-    _a = _a or plt.gca()
-    _a.plot(_p.sol_x, _p.sol_y, solid_capstyle='butt', label=label)
-    #p0, p1 = (_p.sol_x[0], _p.sol_y[0]), (_p.sol_x[-1], _p.sol_y[-1])
-    dx, dy = _p.sol_x[-1]-_p.sol_x[-2], _p.sol_y[-1]-_p.sol_y[-2]
-    #dx *= 10; dy *= 10
-    _a.arrow(_p.sol_x[-1], _p.sol_y[-1], dx, dy, head_width=0.5,head_length=1)
-    _a.add_patch(plt.Circle((_p.sol_x[0], _p.sol_y[0]), 0.5))
-    for _o in _p.obstacles:
-        cx, cy, rm = _o
-        _a.add_patch(plt.Circle((cx,cy),rm, color='r', alpha=0.1))
-    if _p.exp.y_constraint is not None:
-        if _p.exp.x_constraint is not None:
-            p0 = (_p.exp.x_constraint[0], _p.exp.y_constraint[0])
-            dx = _p.exp.x_constraint[1]-_p.exp.x_constraint[0]
-            dy = _p.exp.y_constraint[1]-_p.exp.y_constraint[0]
-            _a.add_patch(plt.Rectangle(p0, dx, dy, color='g', alpha=0.1))
-    d2p.decorate(_a, title='$2D$', xlab='x in m', ylab='y in m', legend=True, xlim=None, ylim=None, min_yspan=0.1)  
-    _a.axis('equal')
-    if save is not None:
-        fn = f'{save}_2d.png'
-        print(f'saved {fn}'); plt.savefig(fn)
-    return _f, _a
 
 def compute_or_load(_p, force_recompute=False, filename='/tmp/optyplan.npz', tol=1e-5, max_iter=1500, initial_guess=None):
     if force_recompute or not os.path.exists(filename):
@@ -230,8 +188,8 @@ def main():
         print('Planner initialized')
         compute_or_load(_p, args.force, cache_filename, tol=scen.tol, max_iter=scen.max_iter, initial_guess=None)
         print('Planner ran')
-        f1, a1 = plot2d(_p, args.save, f1, a1, scen.label(_case))
-        f2, a2 = plot_chrono(_p, args.save, f2, a2)
+        f1, a1 = d2ou.plot2d(_p, args.save, f1, a1, scen.label(_case))
+        f2, a2 = d2ou.plot_chrono(_p, args.save, f2, a2)
     plt.show()
 
     
