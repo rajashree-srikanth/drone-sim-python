@@ -96,18 +96,47 @@ class DFFFController:
 # generating the trajectory - for now, it is just a circle
 # a function to plot the trajectory we want
 # a function or module for the gvf controller
-# class GeneratePath:
-# class CircleTraj:
-#     def __init__(self):
-#         pass
-#     def circle(self):
+class CircleTraj():
+    def __init__(self,X, c = [0,0], r=1):
+        self.px = X[0]
+        self.py = X[1]
+        self.c = c
+        self.r = r
+
+    def get(self):
+        phi = ((self.px-self.c[0])**2 + (self.py - self.c[1])**2)/self.r**2 - 1
+        # p = np.asarray([self.px, self.py])
+        # phi = np.sum(np.square(p-self.c))/self.r**2
+        e = np.asarray(phi)
+        n = np.asarray([2*(self.px - self.c[0])/self.r**2, 2*(self.py - self.c[1])/self.r**2]) # gradient of phi - normal vector
+        H = np.asarray([[2/(self.r**2), 0],[0, 2/(self.r**2)]]) # Hessian 
+        return e, n, H
+    
+class GVFcontroller:
+    def __init__(self, traj, ac, wind):
+        self.traj = traj # the traj has to be called previously in main code before
+        # this controller class is called
+        self.ac = ac
+        self.wind = wind
         
-# class GVFcontroller:
-#     def __init__(self):
-#         self.
-# #
-# #  old stuff, initial 2D pure pursuit
-# #
+    def get(self, X, ke, kd):
+        e, n, H = self.traj.get() # calling the get() of the trajectory class
+        psi = X[2] # heading angle
+        v = X[4]
+        p_dot = np.asarray(v*[np.cos(psi), np.sin(psi)])
+        E = np.asarray([[0, 1], [-1, 0]]) # rotation vector
+        tau = np.matmul(E, n) # tangent vector of ac
+        pd_dot = tau - ke*e@n # @ is equivalent to matrix multiplication for numpy arrays
+        U1 = -(E@pd_dot@np.transpose(pd_dot)@E@((E - ke*e)@H@p_dot 
+                                               - ke*np.transpose(n)@p_dot@n))
+        U1= np.transpose(U1)@(E@pd_dot/(np.linalg.norm(pd_dot))**2)
+        U2 = kd*np.transpose(p_dot)@E@pd_dot
+        U = U1 + U2
+        return U
+        
+#
+#  old stuff, initial 2D pure pursuit
+#
 
 
 class VelControler:

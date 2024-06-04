@@ -36,7 +36,7 @@ def run_simulation(time, aircraft, windfield, ctl, X0, perts):
 # main simulation loop - loops over no. of a/cs, scenario trajectories
 def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
     windfield = scen.windfield
-    aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))]
+    aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))] # len(scen.trajs) - no. of a/cs
     if scen.ppctl:
         ctls = [ddg.PurePursuitControler(traj) for traj in scen.trajs]
     else:
