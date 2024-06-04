@@ -53,6 +53,7 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
         Xs.append(X); Us.append(U); Yrefs.append(Yref)
         
     if show_2d:
+        breakpoint()
         d2plot.plot_trajectory_2d(scen.time, X, U, Yref)
     if show_chrono:
         #ctls[0].draw_debug(_f, _a)

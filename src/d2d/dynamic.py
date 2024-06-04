@@ -8,10 +8,11 @@ class Aircraft:
     s_slice_pos  = slice(s_x, s_y+1)
     g = 9.81
     def __init__(self):
-        self.tau_phi, self.tau_v = 0.1, 1. # roll and speed time constants
+        self.tau_phi, self.tau_v = 0.01, 1. # roll and speed time constants
 
     def cont_dyn(self, X, t, U, W):
         wx, wy = W.sample(t, X[:2])
+        # breakpoint()
         (x, y, psi, phi, v), (phi_c, v_c) = X, U
         Xdot=[ v*np.cos(psi)+wx,
                v*np.sin(psi)+wy,

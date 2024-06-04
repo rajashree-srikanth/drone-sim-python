@@ -104,12 +104,12 @@ class CircleTraj():
         self.r = r
 
     def get(self):
-        phi = ((self.px-self.c[0])**2 + (self.py - self.c[1])**2)/self.r**2 - 1
+        phi = ((self.px-self.c[0])**2 + (self.py - self.c[1])**2) - self.r**2
         # p = np.asarray([self.px, self.py])
         # phi = np.sum(np.square(p-self.c))/self.r**2
         e = np.asarray(phi)
-        n = np.asarray([2*(self.px - self.c[0])/self.r**2, 2*(self.py - self.c[1])/self.r**2]) # gradient of phi - normal vector
-        H = np.asarray([[2/(self.r**2), 0],[0, 2/(self.r**2)]]) # Hessian 
+        n = np.asarray([2*(self.px - self.c[0]), 2*(self.py - self.c[1])]) # gradient of phi - normal vector
+        H = np.asarray([[2, 0],[0, 2]]) # Hessian 
         return e, n, H
     
 class GVFcontroller:
@@ -121,18 +121,31 @@ class GVFcontroller:
         
     def get(self, X, ke, kd):
         e, n, H = self.traj.get() # calling the get() of the trajectory class
+        # breakpoint()
         psi = X[2] # heading angle
         v = X[4]
-        p_dot = np.asarray(v*[np.cos(psi), np.sin(psi)])
+        p_dot_n = np.asarray([np.cos(psi), np.sin(psi)])
+        p_dot = v*p_dot_n
         E = np.asarray([[0, 1], [-1, 0]]) # rotation vector
         tau = np.matmul(E, n) # tangent vector of ac
-        pd_dot = tau - ke*e@n # @ is equivalent to matrix multiplication for numpy arrays
-        U1 = -(E@pd_dot@np.transpose(pd_dot)@E@((E - ke*e)@H@p_dot 
-                                               - ke*np.transpose(n)@p_dot@n))
-        U1= np.transpose(U1)@(E@pd_dot/(np.linalg.norm(pd_dot))**2)
-        U2 = kd*np.transpose(p_dot)@E@pd_dot
+        pd_dot = tau - ke*e*n # @ is equivalent to matrix multiplication for numpy arrays
+        pd_dot_n = pd_dot/(np.linalg.norm(pd_dot))
+        # breakpoint()
+        # m = np.array([[orth_pd_dot_n[0]*orth_pd_dot_n[0],orth_pd_dot_n[0]*orth_pd_dot_n[1]],
+        #               [orth_pd_dot_n[0]*orth_pd_dot_n[1],orth_pd_dot_n[1]*orth_pd_dot_n[1]]])
+
+        orth_pd_dot_n=E@pd_dot_n
+        m = np.outer(orth_pd_dot_n,orth_pd_dot_n)
+        mbis = np.outer(n,p_dot)
+        
+        U1 = -(m@((E - ke*np.identity(2)*e)@H@p_dot - ke*mbis@n))
+        # breakpoint()
+        # print(U1)
+#        print(U1, E - ke*np.identity(2)*e, p_dot, pd_dot)
+        U1 = np.transpose(U1)@(E@pd_dot_n/(np.linalg.norm(pd_dot)))
+        U2 = kd*np.transpose(p_dot_n)@E@pd_dot_n
         U = U1 + U2
-        return U
+        return U, U1, U2
         
 #
 #  old stuff, initial 2D pure pursuit
