@@ -91,20 +91,45 @@ class DFFFController:
     def draw_debug(self, _f, _a, time):
         Xref = np.array(self.Xref)
         _a[0,0].plot(time, Xref[:,0])
+    
+# circular formation
+# distributed circular formation controller (DCF controller)
+class DCFController:
+    def __init__(self):
+        pass
+    # make sure to input all arrays/lists in numpy
+    def get(self, n_ac, B, c, r, p, z_des, kr): 
+        z_des.shape = (len(z_des),1) # ensuring z is a column vector
+        pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
+        theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
+        theta = theta[:, np.newaxis] # converting to column vector
+        z = np.dot(B.T, theta) # inter-vehicle angle
+        e_theta = z - z_des # inter-vehicle angle error
+        # loop to ensure angle limits
+        i = 0
+        for e in e_theta: 
+            if e > np.pi:
+                e = e - 2*np.pi
+            if e <= -np.pi:
+                e = e + 2*np.pi
+            e_theta[i] = e
+            i =+ 1
+        U_r = kr*np.dot(B,e_theta) # note that U_r is a column vector
+        return U_r
+        
         
 # gvf controller
 # generating the trajectory - for now, it is just a circle
 # a function to plot the trajectory we want
 # a function or module for the gvf controller
 class CircleTraj():
-    def __init__(self, c = [0,0], r=1):
+    def __init__(self, c = np.array([0,0])):
         self.c = c
-        self.r = r
 
-    def get(self, X):
+    def get(self, X, r=1):
         px = X[0]
         py = X[1]
-        phi = ((px-self.c[0])**2 + (py - self.c[1])**2) - self.r**2
+        phi = ((px-self.c[0])**2 + (py - self.c[1])**2) - r**2
         # p = np.asarray([self.px, self.py])
         # phi = np.sum(np.square(p-self.c))/self.r**2
         e = np.asarray(phi)
