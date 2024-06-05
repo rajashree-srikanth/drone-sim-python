@@ -97,18 +97,18 @@ class DFFFController:
 # a function to plot the trajectory we want
 # a function or module for the gvf controller
 class CircleTraj():
-    def __init__(self,X, c = [0,0], r=1):
-        self.px = X[0]
-        self.py = X[1]
+    def __init__(self, c = [0,0], r=1):
         self.c = c
         self.r = r
 
-    def get(self):
-        phi = ((self.px-self.c[0])**2 + (self.py - self.c[1])**2) - self.r**2
+    def get(self, X):
+        px = X[0]
+        py = X[1]
+        phi = ((px-self.c[0])**2 + (py - self.c[1])**2) - self.r**2
         # p = np.asarray([self.px, self.py])
         # phi = np.sum(np.square(p-self.c))/self.r**2
         e = np.asarray(phi)
-        n = np.asarray([2*(self.px - self.c[0]), 2*(self.py - self.c[1])]) # gradient of phi - normal vector
+        n = np.asarray([2*(px - self.c[0]), 2*(py - self.c[1])]) # gradient of phi - normal vector
         H = np.asarray([[2, 0],[0, 2]]) # Hessian 
         return e, n, H
     
@@ -119,8 +119,8 @@ class GVFcontroller:
         self.ac = ac
         self.wind = wind
         
-    def get(self, X, ke, kd):
-        e, n, H = self.traj.get() # calling the get() of the trajectory class
+    def get(self, X, ke, kd, e, n, H):
+        # e, n, H = self.traj.get() # calling the get() of the trajectory class
         # breakpoint()
         psi = X[2] # heading angle
         v = X[4]
@@ -131,20 +131,20 @@ class GVFcontroller:
         pd_dot = tau - ke*e*n # @ is equivalent to matrix multiplication for numpy arrays
         pd_dot_n = pd_dot/(np.linalg.norm(pd_dot))
         # breakpoint()
+        orth_pd_dot_n=E@pd_dot_n
         # m = np.array([[orth_pd_dot_n[0]*orth_pd_dot_n[0],orth_pd_dot_n[0]*orth_pd_dot_n[1]],
         #               [orth_pd_dot_n[0]*orth_pd_dot_n[1],orth_pd_dot_n[1]*orth_pd_dot_n[1]]])
-
-        orth_pd_dot_n=E@pd_dot_n
-        m = np.outer(orth_pd_dot_n,orth_pd_dot_n)
-        mbis = np.outer(n,p_dot)
+        # manually performing orth_pd_dot_n*transpose(orth_pd_dot_n)
+        m = np.outer(orth_pd_dot_n,orth_pd_dot_n) # easier way of above operation
+        mbis = np.outer(n,p_dot) # n*transpose(p_dot)
         
         U1 = -(m@((E - ke*np.identity(2)*e)@H@p_dot - ke*mbis@n))
         # breakpoint()
         # print(U1)
-#        print(U1, E - ke*np.identity(2)*e, p_dot, pd_dot)
+        # print(U1, E - ke*np.identity(2)*e, p_dot, pd_dot)
         U1 = np.transpose(U1)@(E@pd_dot_n/(np.linalg.norm(pd_dot)))
         U2 = kd*np.transpose(p_dot_n)@E@pd_dot_n
-        U = U1 + U2
+        U = U1 + U2 # heading control action 
         return U, U1, U2
         
 #
