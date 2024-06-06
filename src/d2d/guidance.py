@@ -98,24 +98,19 @@ class DCFController:
     def __init__(self):
         pass
     # make sure to input all arrays/lists in numpy
-    def get(self, n_ac, B, c, r, p, z_des, kr): 
+    def get(self, n_ac, B, c, p, z_des, kr): 
         z_des.shape = (len(z_des),1) # ensuring z is a column vector
         pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
         theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
-        theta = theta[:, np.newaxis] # converting to column vector
-        z = np.dot(B.T, theta) # inter-vehicle angle
+        # theta = theta[:, np.newaxis] # converting to column vector
+        # z = np.dot(B.T, theta) # inter-vehicle angle
+        z = theta @ B
         e_theta = z - z_des # inter-vehicle angle error
-        # loop to ensure angle limits
-        i = 0
-        for e in e_theta: 
-            if e > np.pi:
-                e = e - 2*np.pi
-            if e <= -np.pi:
-                e = e + 2*np.pi
-            e_theta[i] = e
-            i =+ 1
+        # ensure angle limits
+        e_theta = (e_theta % 2*np.pi) - np.pi
         U_r = kr*np.dot(B,e_theta) # note that U_r is a column vector
-        return U_r
+        # breakpoint()
+        return U_r,e_theta
         
         
 # gvf controller

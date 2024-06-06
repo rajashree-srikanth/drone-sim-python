@@ -18,7 +18,7 @@ import d2d.scenario as dds
 def CircularFormationGVF(c, r, n_ac):
     
     # initializing parameters
-    t_start, t_step, t_end = 0, 0.01, 120
+    t_start, t_step, t_end = 0, 0.01, 20
     time = np.arange(t_start, t_end, t_step)
     # n_ac = 1 # no. of aircraft in formation flight
     windfield = ddg.WindField() # creating windfield object
@@ -80,9 +80,13 @@ def plotting(X_array, U_array, U1, U2, Y_ref, time):
         plt.xlabel("time (s)")
         plt.ylabel("V (m/s)")
         plt.plot(time, X_array[:,0,4])
-        # plt.figure(4)
-        # plt.plot(time, U1)
-        # plt.plot(time, U2)
+        plt.figure(5)
+        plt.plot(time, U1)
+        plt.figure(6)
+        plt.plot(time, U2)
+        plt.figure(7)
+        plt.plot(time, X_array[:,0,3])
+        plt.plot(time, X_array[:,0,2])
         plt.show()
 
 def main():
