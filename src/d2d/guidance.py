@@ -102,15 +102,24 @@ class DCFController:
         z_des.shape = (len(z_des),1) # ensuring z is a column vector
         pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
         theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
-        # theta = theta[:, np.newaxis] # converting to column vector
-        # z = np.dot(B.T, theta) # inter-vehicle angle
-        z = theta @ B
+        theta = theta[:, np.newaxis] # converting to column vector
+        breakpoint()
+        z = np.dot(B.T, theta) # inter-vehicle angle
+        # z = theta @ B
+        # z = np.transpose(B)*theta
         e_theta = z - z_des # inter-vehicle angle error
-        # ensure angle limits
-        e_theta = (e_theta % 2*np.pi) - np.pi
-        U_r = kr*np.dot(B,e_theta) # note that U_r is a column vector
+        # ensure angle limits 
+        for i in range(len(e_theta)):
+            if e_theta[i] > np.pi:
+                e_theta[i] = e_theta - (2*np.pi)
+            if e_theta[i] <= -np.pi:
+                e_theta[i] = e_theta[i] + (2*np.pi)
+        # e_theta = (e_theta % (2*np.pi)) - np.pi
         # breakpoint()
-        return U_r,e_theta
+        U_r = -kr*np.dot(B,e_theta) # note that U_r is a column vector
+        # print(U_r)
+        # breakpoint()
+        return U_r,np.rad2deg(e_theta)
         
         
 # gvf controller
