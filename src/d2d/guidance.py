@@ -103,7 +103,7 @@ class DCFController:
         pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
         theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
         theta = theta[:, np.newaxis] # converting to column vector
-        breakpoint()
+        # breakpoint()
         z = np.dot(B.T, theta) # inter-vehicle angle
         # z = theta @ B
         # z = np.transpose(B)*theta
