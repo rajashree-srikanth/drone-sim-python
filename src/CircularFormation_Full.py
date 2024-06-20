@@ -163,14 +163,14 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
             l.get_texts()[0].set_text(t)
             return (line)
         
-        ani = animation.FuncAnimation(fig=fig, func=update, frames=40000, interval=1)
+        ani = animation.FuncAnimation(fig=fig, func=update, frames=len(time), interval=1)
         plt.show()
 
 def main():
     c = np.array([0,0])
     r = 80
     n_ac = int(input("Enter no. of aircraft: ")) # no. of aircraft in formation flight
-    t_end = 150*(int(n_ac/4) + 1) # simulation time 
+    t_end = 150*(int(n_ac/3) + 1) # simulation time 
     # phase convergence time increases with no. of aicraft in simulation, hence 
     # it is made variable
     print(t_end)
