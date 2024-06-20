@@ -5,6 +5,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 import d2d.dynamic as ddyn
 import d2d.guidance as ddg
@@ -16,10 +17,10 @@ import d2d.trajectory_factory as ddtf
 import d2d.scenario as dds
 from mpl_toolkits import mplot3d
 
-def CircularFormationGVF(c, r, n_ac):
+def CircularFormationGVF(c, r, n_ac, t_end):
     
     # initializing parameters
-    t_start, t_step, t_end = 0, 0.05, 500
+    t_start, t_step = 0, 0.05
     time = np.arange(t_start, t_end, t_step)
     # n_ac = 1 # no. of aircraft in formation flight
     windfield = ddg.WindField() # creating windfield object
@@ -145,13 +146,35 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
         # ax = plt.axes(projection='3d')
         # ax.plot3D(time, X_array[:,0,0], X_array[:,0,1])
         # ax.plot3D(time, X_array[:,1,0], X_array[:,1,1])
+        
+        # animating
+        fig, ax = plt.subplots()
+        line = ax.plot(X_array[0,:,0], X_array[0,:,1], "k.", label='Time: 0 s')[0]
+        ax.plot(Y_ref[1][:], Y_ref[0][:], "--", label="Reference Trajectory")
+        ax.set(xlim=[-150, 150], ylim=[-150, 150], xlabel='X (m)', ylabel='Y [m]', 
+               title='Trajectory')
+        l = ax.legend()
+        def update(frame):
+            x = X_array[:,:,0]
+            y = X_array[:,:,1]
+            line.set_xdata(x[frame-10:frame])
+            line.set_ydata(y[frame-10:frame])
+            t = "Time: " + str(round(time[frame],1)) + " s"
+            l.get_texts()[0].set_text(t)
+            return (line)
+        
+        ani = animation.FuncAnimation(fig=fig, func=update, frames=40000, interval=1)
         plt.show()
 
 def main():
     c = np.array([0,0])
-    r = 100
+    r = 80
     n_ac = int(input("Enter no. of aircraft: ")) # no. of aircraft in formation flight
-    X_array, U_array, time, U1, U2, Ur, e_theta_arr = CircularFormationGVF(c, r, n_ac)
+    t_end = 150*(int(n_ac/4) + 1) # simulation time 
+    # phase convergence time increases with no. of aicraft in simulation, hence 
+    # it is made variable
+    print(t_end)
+    X_array, U_array, time, U1, U2, Ur, e_theta_arr = CircularFormationGVF(c, r, n_ac, t_end)
     theta_ref = np.arange(0, 2*np.pi, 0.01)
     Y_ref = [r*np.cos(theta_ref), r*np.sin(theta_ref)]
     # plotting results
