@@ -16,14 +16,15 @@ def planner_timing(t0, t1, hz):
 
 # Wind
 class WindField:
-    def __init__(self, w=[0.,0.]):
-        self.w = w
+   def __init__(self, w=[0.,0.]):
+      self.w = w
         
-    def sample_sym(self, _t, _x, _y):
-        return self.w
+   def sample_sym(self, _t, _x, _y):
+      return self.w
     
-    def sample_num(self, _t, _x, _y):
-        return self.w
+   def sample_num(self, _t, _x, _y):
+      return self.w
+   def __str__(self): return f'{self.w} m/s'
 
 # Symbols for one aircraft (time, state, input)
 class Aircraft:
@@ -75,32 +76,62 @@ class CostBank:  # max bank or mean squared bank
             _i = np.argmax(np.square(phis))
             grad[_p._slice_phi][_i] = _p.obj_scale*2*phis[_i]
         return grad
+
+
+class CostInput:
+   def __init__(self, vsp=10., kvel=1., kbank=1.):
+      self.vsp, self.kv, self.kphi = vsp, kvel, kbank
+   def cost(self, free, _p):
+      sum_phi_squared = np.sum(np.square(free[_p._slice_phi]))
+      sum_err_vel_squared = np.sum(np.square(free[_p._slice_v]-self.vsp))
+      return _p.obj_scale/_p.num_nodes* (self.kv*sum_err_vel_squared + self.kphi*sum_phi_squared)
+   def cost_grad(self, free, _p):
+      grad = np.zeros_like(free)
+      grad[_p._slice_phi] = self.kphi*2*free[_p._slice_phi]
+      grad[_p._slice_v] =  self.kv*2*(free[_p._slice_v]-self.vsp)
+      grad *= _p.obj_scale/_p.num_nodes
+      return grad
+     
 class CostObstacle: # penalyze circular obstacle
-    def __init__(self, c=(30,0), r=15.):
-        self.c, self.r = c, r
+   def __init__(self, c=(30,0), r=15., kind=0):
+      self.c, self.r = c, r
+      self.kind = kind
+      self.k=2.
 
-    def cost(self, free, _p):
-        xs, ys = free[_p._slice_x], free[_p._slice_y]
-        dxs, dys = xs-self.c[0], ys-self.c[1]
-        ds = np.square(dxs)+np.square(dys)
-        es = np.exp(self.r**2-ds)
-        es = np.clip(es, 0., 1e3)
-        return _p.obj_scale/_p.num_nodes * np.sum(es)
+   def cost1(self, free, _p):
+      xs, ys = free[_p._slice_x], free[_p._slice_y]
+      dxs, dys = xs-self.c[0], ys-self.c[1]
+      if self.kind==0:
+         ds = np.square(dxs)+np.square(dys)
+         errs = np.exp(self.r**2-ds)
+         es = np.clip(errs, 0., 1e3)
+      else:
+         d2 = np.square(dxs/self.r*self.k)+np.square(dys/self.r*self.k)
+         es = np.exp(-d2) 
+      return es
+   
+   def cost(self, free, _p):
+      errs = self.cost1(free, _p)
+      return _p.obj_scale/_p.num_nodes * np.sum(errs)
 
-    def cost_grad(self, free, _p):
-        grad = np.zeros_like(free)
-        xs, ys = free[_p._slice_x], free[_p._slice_y]
-        dxs, dys = xs-self.c[0], ys-self.c[1]
-        ds = np.square(dxs)+np.square(dys)
-        es = np.exp(self.r**2-ds)
-        es = np.clip(es, 0., 1e3)#breakpoint()
-        grad[_p._slice_x] =  _p.obj_scale/_p.num_nodes*-2.*dxs*es
-        grad[_p._slice_y] =  _p.obj_scale/_p.num_nodes*-2.*dys*es
-        return grad
+   def cost_grad(self, free, _p):
+      grad = np.zeros_like(free)
+      xs, ys = free[_p._slice_x], free[_p._slice_y]
+      dxs, dys = xs-self.c[0], ys-self.c[1]
+      if self.kind==0:
+         ds = np.square(dxs)+np.square(dys)
+         es = np.exp(self.r**2-ds)
+         es = np.clip(es, 0., 1e3)#breakpoint()
+      else:
+         d2 = np.square(dxs/self.r*self.k)+np.square(dys/self.r*self.k)
+         es = np.exp(-d2)
+      grad[_p._slice_x] =  _p.obj_scale/_p.num_nodes*-2.*dxs*es
+      grad[_p._slice_y] =  _p.obj_scale/_p.num_nodes*-2.*dys*es
+      return grad
 
 class CostObstacles: # penalyze set of circular obstacles
-    def __init__(self, obss):
-        self.obss = [CostObstacle(c=(_o[0], _o[1]), r=_o[2]) for _o in obss]
+    def __init__(self, obss, kind=0):
+        self.obss = [CostObstacle(c=(_o[0], _o[1]), r=_o[2], kind=kind) for _o in obss]
         
     def cost(self, free, _p):
         return np.sum([_c.cost(free, _p) for _c in self.obss])
@@ -110,9 +141,9 @@ class CostObstacles: # penalyze set of circular obstacles
 
 
 class CostComposit: # a mix of the above
-    def __init__(self, obss, vsp=10., kobs=1., kvel=1., kbank=1.):
+    def __init__(self, obss, vsp=10., kobs=1., kvel=1., kbank=1., obs_kind=0):
         self.kobs, self.kvel, self.kbank = kobs, kvel, kbank
-        try: self.cobs = CostObstacles(obss)
+        try: self.cobs = CostObstacles(obss, obs_kind)
         except: pass
         self.cvel = CostAirVel(vsp)
         self.cbank = CostBank()

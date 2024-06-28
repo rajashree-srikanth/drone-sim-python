@@ -34,7 +34,7 @@ class exp_0_1(exp_0):
     t1s = [7., 10., 15., 20, 30]
     ncases = len(t1s)
     #x_constraint, y_constraint = (-5., 50.), (-20., 70.)
-    wind = d2ou.WindField(w=[-3.,0.])
+    #wind = d2ou.WindField(w=[-3.,0.])
     def set_case(idx):
         exp_0.t1 = exp_0_1.t1s[idx]
     def label(idx): return f'{exp_0_1.t1s[idx]:.1f} s'
@@ -42,6 +42,8 @@ class exp_0_1(exp_0):
     desc = 'changing duration'
 
 class exp_0_2(exp_0):
+    name = 'exp0_2'
+    desc = 'changing wind'
     tol, max_iter = 1e-5, 5000
     winds = [[0., 0.], [1., 0.], [2., 0.], [5., 0.]]
     #winds = [[0., 0.], [1., 0.], [2., 0.], [5., 0.], [7., 0.], [10., 0.], [12., 0.]]
@@ -49,21 +51,37 @@ class exp_0_2(exp_0):
     def set_case(idx):
         exp_0.wind = d2ou.WindField(w=exp_0_2.winds[idx])
     def label(idx): return f'wind {exp_0_2.winds[idx]} m/s'
-    name = 'exp0_2'
-    desc = 'changing wind'
 
 
-class exp_1(exp_0):
+class exp_0_3(exp_0):
+    name = 'exp0_3'
+    desc = 'xy constraints'
     tol, max_iter = 1e-5, 5000
     cost = d2ou.CostBank()
     obj_scale = 1.e-1
-    name = 'exp1'
-    desc = 'xy constraints'
     x_constraint, y_constraint = (-5., 45.), (-1., 51.)
     t1 = 20.
     
     
+class exp_1(exp_0):   # input objectives
+    name = 'exp_1'
+    desc = 'combined phi/vel objective'
+    t0, p0 = 0.,  ( 0.,   0., 0.,    0., 12.)    # initial position: t0, ( x0, y0, psi0, phi0, v0)
+    t1, p1 = 10., ( 100., 0., 0.,    0., 12.)    # final position
+
+    cost, obj_scale = d2ou.CostInput(vsp=12., kvel=1., kbank=50.), 1.
     
+    
+class exp_1_1(exp_1):   # varying weight for vel and bank
+    name = 'exp_1_1'
+    desc = 'combined phi/vel objective'
+    Ks = [[1., 0.5], [1., 1.],[1., 10.],[1., 20.], [1., 30.], [1., 40.], [1., 50.]]
+    ncases = len(Ks)
+    def set_case(idx):
+        exp_1_1.K = exp_1_1.Ks[idx]
+        exp_1_1.cost = d2ou.CostInput(vsp=12., kvel=exp_1_1.K[0], kbank=exp_1_1.K[1])
+        
+    def label(idx): return f'kvel, kbank {exp_1_1.K}'
     
 class exp_421(exp_0):
     cost = d2ou.CostBank()
@@ -84,7 +102,37 @@ class exp_3(exp_2):
     name = 'exp3'
     desc = 'bank/vel obective, xy constraints'
 
-class exp_4(exp_0):
+class exp_4(exp_0):  # Obstacles  - reference for multi aircraft version
+    t0, p0 = 0., ( 0., 0., 0,    0., 10.)    # initial position
+    t1, p1 = 6.5, ( 50., 0., 0,    0., 10.)  # final position
+    obstacles = ((25, -20, 10), )
+    cost = d2ou.CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
+    obj_scale = 1.e-2
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    x_constraint, y_constraint = (-5., 105.), (-15., 35.)
+    #v_constraint = (11.99, 12.01)
+    v_constraint = (9., 15.)
+    name = 'exp4'
+    desc = 'obstacle - simple case'
+
+class exp_4_1(exp_0):  # Obstacles  - reference for multi aircraft version
+    t0, p0 = 0., ( 0., 0., 0,    0., 10.)    # final position
+    t1, p1 = 8.5, ( 100., 0., 0,    0., 10.)    # final position
+    obstacles = ((50, -10, 25), )
+    #cost = d2ou.CostObstacle(obstacles[0][:2], obstacles[0][2], kind=0)
+    #cost = d2ou.CostObstacle(obstacles[0][:2], obstacles[0][2], kind=1)
+    cost = d2ou.CostInput(vsp=12., kvel=0.5, kbank=1.)
+    #cost = d2ou.CostComposit(obstacles, vsp=12., kobs=0.5, kvel=0.5, kbank=1., obs_kind=1)
+    obj_scale = 1.e-2
+    x_constraint = (-5., 105.)
+    y_constraint = (-10., 40.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    #v_constraint = (11.99, 12.01)
+    v_constraint = (9., 15.)
+    name = 'exp4_1'
+    desc = 'obstacle - simple case'
+
+class exp_4_2(exp_0):  # Testing obstacles in maze like configuration
     t1, p1 = 15., ( 100., 0., 0,    0., 10.)    # final position
     obstacles = ((25, 0, 15), (55, 7.5, 12), (80, -10, 12))
     cost = d2ou.CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
@@ -93,8 +141,24 @@ class exp_4(exp_0):
     x_constraint = (-5., 105.)
     #y_constraint = (-10., 25.) # fails
     y_constraint = (-15., 35.) #(-20., 20.)
+    v_constraint = (11.99, 12.01)
+    v_constraint = (9., 15.)
     name = 'exp4'
-    desc = 'obstacles'
+    desc = 'obstacles - maze'
+
+class exp_4_3(exp_0):  # Testing obstacles in maze like configuration
+    t1, p1 = 15., ( 100., 0., 0,    0., 10.)    # final position
+    obstacles = ((25, 0, 15), (55, 7.5, 12), (80, -10, 12))
+    cost = d2ou.CostComposit(obstacles, vsp=15., kobs=0.5, kvel=0.5, kbank=1.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    obj_scale = 1.e-2
+    x_constraint = (-5., 105.)
+    #y_constraint = (-10., 25.) # fails
+    y_constraint = (-15., 35.) #(-20., 20.)
+    v_constraint = (11.99, 12.01)
+    v_constraint = (9., 15.)
+    name = 'exp4'
+    desc = 'obstacles - maze'
 
 class exp_5(exp_0):
     t0, p0 =  0., (   0., 40., 0,   0., 10.)    # start position 
@@ -145,7 +209,7 @@ class exp_6(exp_0):
     name = 'exp6'
     desc = 'Rendez-vous'
     
-scens = [exp_0, exp_0_1, exp_0_2, exp_1, exp_2, exp_3, exp_4, exp_5, exp_6]
+scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6]
 
 def desc_all(): return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
 
