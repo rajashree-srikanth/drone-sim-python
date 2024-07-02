@@ -30,7 +30,7 @@ class DiffFlatness:
         va2 = vax**2+vay**2; va = np.sqrt(va2)
         X[Aircraft.s_va] = va                           # va
         X[Aircraft.s_psi] = np.arctan2(vay, vax)        # psi
-        wxdot, wydot = 0., 0. # wind is stationnary
+        wxdot, wydot = 0., 0. # wind is stationary by default
         vaxd, vayd = xdd-wxdot, ydd-wydot
         Xdot[Aircraft.s_va] = (vax*vaxd + vay*vayd)/va  # va dot
         Xdot[Aircraft.s_psi] = (vayd*vax-vaxd*vay)/va2  # psi dot

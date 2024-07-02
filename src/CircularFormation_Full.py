@@ -35,8 +35,8 @@ def CircularFormationGVF(c, r, n_ac, t_end):
     X_array = np.zeros((len(time),n_ac,5))
     
     # controller gains
-    ke = 0.0005 # aggressiveness of the gvf guidance
-    kd = 10 # speed of exponential convergence to required guidance trajectory
+    ke = 0.0004 # aggressiveness of the gvf guidance
+    kd = 15 # speed of exponential convergence to required guidance trajectory
     kr = 20 # controls the speed of convergence to required phase separation
     R = r*np.ones((n_ac,1))
     
@@ -168,7 +168,7 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
 
 def main():
     c = np.array([0,0])
-    r = 80
+    r = 60
     n_ac = int(input("Enter no. of aircraft: ")) # no. of aircraft in formation flight
     t_end = 150*(int(n_ac/3) + 1) # simulation time 
     # phase convergence time increases with no. of aicraft in simulation, hence 
