@@ -63,9 +63,12 @@ def main():
         scen.set_case(_case)
         cache_filename = f'./cache/optyplan_{scen.name}_{_case}.npz' if scen.ncases>1 else f'./cache/optyplan_{scen.name}.npz'
         _p = d2op.Planner(scen, initialize=args.force or not os.path.exists(cache_filename))
+        import time
+        start = time.time()
         print('Planner initialized')
         compute_or_load(_p, args.force, cache_filename, tol=scen.tol, max_iter=scen.max_iter, initial_guess=None)
-        print('Planner ran')
+        end = time.time()
+        print(f'Planner ran {end-start}s')
         f1, a1 = d2ou.plot2d(_p, args.save, f1, a1, scen.label(_case))
         f2, a2 = d2ou.plot_chrono(_p, args.save, f2, a2)
     plt.show()

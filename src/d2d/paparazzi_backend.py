@@ -17,6 +17,8 @@ from pprzlink.ivy import IvyMessagesInterface
 from pprzlink.message import PprzMessage
 ###
 
+def norm_mpi_pi(v): return ( v + np.pi) % (2 * np.pi ) - np.pi
+
 class PprzAircraft:
     def __init__(self, _id):
         self.id = _id
@@ -32,7 +34,8 @@ class PprzAircraft:
 
 
     def get_state(self): # returns state as in dynamics.py , ie x, y, psi, phi, va, in standard units
-        return self.x, self.y, np.pi/2 - np.deg2rad(self.psi), np.deg2rad(self.phi), self.vel
+        psi = norm_mpi_pi(np.pi/2 - np.deg2rad(self.psi))
+        return self.x, self.y, psi, np.deg2rad(self.phi), self.vel
 
 
 class PprzBackend:

@@ -1,6 +1,9 @@
 import numpy as np, scipy.integrate
 
 
+import matplotlib.pyplot as plt
+
+
 import d2d.trajectory as ddt
 from d2d.trajectory import Trajectory
 import d2d.dynamic as ddyn
@@ -56,32 +59,56 @@ class DFFFController:
         self.carrot, self.ref_pos = [0,0], [0,0]
         self.record = record
         if self.record:
-            self.t, self.X, self.Xref, self.K, self.U = [], [], [], [], []
+            self.t, self.X, self.Xref, self.K, self.U, self.fb_poles = [], [], [], [], [], []
         self.disable_feedback = False
             
     def get(self, X, t):
+        _X = np.array(X)
+        #print(f'{_X[0]:.1f} {_X[1]:.1f} {np.rad2deg(_X[2]):.1f}')
         Yref = self.traj.get(t)
         W = self.wind.sample(t, Yref[0])
         Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
+        U = Ur
         dX = X - Xr
         dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
+        #print(X[Aircraft.s_psi], dX[Aircraft.s_psi])
         err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
         dX = np.clip(dX, -err_sats, err_sats)
         A, B = self.ac.cont_jac(Xr, Ur, t, W)
-        #val_p, vect_p = np.linalg.eig(A)
-        #print(val_p)
         if 0: # dim 5 feedback
             Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
-            (K, X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
-        else: # dim 3 feedback
+            (K, __X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
+            cl_poles, cl_vp =  np.linalg.eig(A-np.dot(B, K))
+        if 1: # dim 3 feedback
             A1,B1 = A[:3,:3], A[:3,3:]
-            Q, R = [1, 1, 0.1], [2, 1]
-            (K1, X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
+            #Q, R = [1, 1, 0.1], [2, 1]
+            Q, R = [1., 1., 20.], [200, 1000]
+            (K1, __X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
             K=np.zeros((2,5))
             K[:,:3]=K1
-        #valp2, vectp2 =  np.linalg.eig(A-np.dot(B, K))
+            cl_poles, cl_vp =  np.linalg.eig(A1-np.dot(B1, K1))
+            cl_poles, cl_vp =  np.linalg.eig(A-np.dot(B, K))
+        if 0: # debuging
+            vr, psir, phir = Xr[Aircraft.s_va], Xr[Aircraft.s_psi], Xr[Aircraft.s_phi] 
+            A2 = np.array([[0, 0, -vr*np.sin(psir)], [0, 0, vr*np.cos(psir)], [0, 0, 0]])
+            B2 = np.array([[0], [0], [9.81/vr/(1+np.cos(phir)**2)]])
+            #print(A2, B2)
+            #print(np.linalg.eig(A2))
+            #Q, R = [1, 1, 0.1], [1]
+            #breakpoint()
+            #(K2, __X, E) = control.lqr(A2, B2, np.diag(Q), np.diag(R))
+            K2 = np.array(control.place(A2, B2, [-1, -2, -3]))
+            cl_poles, cl_vp =  np.linalg.eig(A2-np.dot(B2, K2))
+            K=np.zeros((2,5))
+            K[0,:3]=K2
+            #cl_poles, cl_vp =  np.linalg.eig(A-np.dot(B, K))
+        if 0:
+            Kpsi = 0.1
+            K=np.zeros((2,5))
+            K[0,2]= Kpsi
+            cl_poles, cl_vp =  np.linalg.eig(A-np.dot(B, K))
+            
         dU = -np.dot(K, dX)
-        U = Ur
         if not self.disable_feedback: U += dU
         #phisat, vmin, vmax = np.deg2rad(30), 9, 15
         phisat, vmin, vmax = np.deg2rad(45), 9, 15
@@ -93,11 +120,32 @@ class DFFFController:
             self.Xref.append(Xr)
             self.K.append(K)
             self.U.append(U)
+            self.fb_poles.append(cl_poles)
         return U
 
-    def draw_debug(self, _f, _a, time):
-        Xref = np.array(self.Xref)
-        _a[0,0].plot(time, Xref[:,0])
+    def draw_debug(self, _f=None, _a=None):
+        #Xref = np.array(self.Xref)
+        #_a[0,0].plot(time, Xref[:,0])
+        _f = plt.figure(tight_layout=True, figsize=[16., 9.]) if _f is None else _f
+        _a = _f.subplots(5, 1) if _a is None else _a
+        for _p in self.fb_poles:
+            _a[0].plot(_p.real, _p.imag, '.')
+        _a[0].set_title('cl poles')
+        dts = np.diff(self.t)
+        _a[1].hist(dts)
+        _a[1].set_title('timing')
+
+        K = np.array(self.K)
+        _a[2].plot(K[:,0,0])
+        _a[2].plot(K[:,0,1])
+        _a[2].set_title('gains')
+
+        U = np.array(self.U)
+        _a[3].plot(np.rad2deg(U[:,0]))
+        _a[4].plot(U[:,1])
+
+        
+#breakpoint()
         
 
 
@@ -150,8 +198,9 @@ class PurePursuitControler:
         self.record = record
         if self.record:
             self.t, self.X, self.Xref, self.K, self.U = [], [], [], [], []
+        print('dfctl init')
         
-    def get(self, X, t):#, time):
+    def get(self, X, t):
         dists = np.linalg.norm(self.pts_2d-X[:ddyn.Aircraft.s_y+1], axis=1)
         idx_closest = np.argmin(dists)
         self.ref_pos.append(self.pts_2d[idx_closest])
@@ -180,8 +229,9 @@ class PurePursuitControler:
         if self.record:
             self.t.append(t)
             self.X.append(X)
+            #print(X, self.X)
             self.Xref.append(Xref)
-            #self.K.append(K)
+            self.K.append(K)
             self.U.append(U)
         return  U
 

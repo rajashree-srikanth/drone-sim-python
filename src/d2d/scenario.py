@@ -18,6 +18,7 @@ def list_available():
     return ['{}: {}'.format(k,v[0]) for k,v in sorted(_scenarios.items())]
 
 _default_dt = 0.01 # not proud of that :(
+#_default_dt = 0.1 # not proud of that :(
 
 
 class Scenario:
@@ -73,6 +74,7 @@ class ScenLine(Scenario):
     desc = 'line'
     def __init__(self):
         Y0, Y1 = [0,25], [100, 25]
+        #Y0, Y1 = [0,25], [100, 125]
         self.trajs = [ddt.TrajectoryLine(Y0, Y1, v=10., t0=0.)]
         self.extends = (-10, 110, 0, 50) # _xmin, _xmax, _ymin, _ymax
         self.windfield = d2guid.WindField()
@@ -307,6 +309,7 @@ class ScenOptyNew(Scenario):
     def __init__(self):
         if 1:
             self.trajs =  [ddtf.TrajTabulated('cache/optyplan_exp0.npz')]
+            self.X0s = [[0, 10, 0, 0, 10]]
         if 0:
             self.trajs =  [ddtf.TrajTabulated('cache/optyplan_exp6_7_4.npz')]
         if 0:

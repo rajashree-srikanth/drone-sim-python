@@ -27,6 +27,7 @@ class Scenario:
         self.t1, self.p1 =  dt, p1
         self.vref = v
         self.cost, self.obj_scale = d2ou.CostInput(vsp=self.vref, kvel=50., kbank=1.), 1#.e-2
+        self.cost, self.obj_scale = d2ou.CostAirVel(self.vref), 1
         self.wind = d2ou.WindField(w=[0.,0.])
         self.x_constraint, self.y_constraint = None, None
         #x_constraint, y_constraint = (-5., 100.), (-50., 50.) 
@@ -40,7 +41,7 @@ class Scenario:
 def get_trajectory(idx, x, y, psi, phi, vel):
     GOAL = np.array([0., 200., np.pi, 0., 12.])
 
-    if idx == 0:
+    if idx == 0: # circle
         traj = d2traj.TrajectoryCircle( c=[-50, 0],  r=80., v=vel)
     elif idx == 1: # line
         dt, dpsi, dl = 40., np.deg2rad(10), 25.
@@ -161,8 +162,7 @@ class Controller:
                 ac , wind = d2dyn.Aircraft(), d2guid.WindField([0., 0.])
                 self.ctl = d2guid.DFFFController(self.traj, ac, wind)
             ext_guid_block_id = 7
-            self.backend.jump_to_block(12, ext_guid_block_id)
-
+            self.backend.jump_to_block(self.ac_id, ext_guid_block_id)
             self.initialized = True
             print('trajectory computed, starting control')
         if self.initialized:
@@ -177,9 +177,7 @@ def plot(ctl):
     t, X, Xr, U = np.array(ctl.ctl.t), np.array(ctl.ctl.X), np.array(ctl.ctl.Xref), np.array(ctl.ctl.U)#, np.array(ctl.ctl.Yr)
     d2plot.plot_trajectory_chrono(t, X)
     d2plot.plot_control_chrono(t, X=X, U=U, Yref=None, Xref=Xr)
-    
-    #breakpoint()
-    #plt.plot(ctl.ctl.t, ctl.ctl.X)
+    ctl.ctl.draw_debug()
     plt.show()
         
 def main(args):
@@ -187,8 +185,8 @@ def main(args):
     #     conf = json.load(f)
     #     if args.verbose:
     #         print(json.dumps(conf))
-    conf = {'hz':10}
-    traj_id, ctl_id = 1, 0
+    conf = {'hz':20}
+    traj_id, ctl_id = 5, 1
     c = Controller(conf, traj_id, ctl_id)
     c.run()
     plot(c)
