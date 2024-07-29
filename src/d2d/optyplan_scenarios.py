@@ -25,7 +25,7 @@ class exp_0:
     name = 'exp0'
     desc = 'Turn around - 12m/s objective'
     def set_case(idx): pass
-    def label(idx): return ''
+    def label(idx): return f'{idx}'
 
 class exp_0_1(exp_0):
     tol, max_iter = 1e-5, 5000
@@ -93,7 +93,7 @@ class exp_2(exp_0):
     name = 'exp2'
     desc = 'bank/vel obective'
 
-class exp_3(exp_2):
+class exp_2_1(exp_2):
     #cost = d2ou.CostBank()
     cost = d2ou.CostComposit(None, 12., kobs=0., kvel=0.5, kbank=1.)
     obj_scale = 1.
@@ -102,6 +102,19 @@ class exp_3(exp_2):
     name = 'exp3'
     desc = 'bank/vel obective, xy constraints'
 
+class exp_3(exp_0):
+    name = 'exp3'
+    desc = 'input_cost'
+    cost = d2ou.CostInput(vsp=15., kvel=1., kbank=1.)
+    p0s = d2ou.pts_on_circle(c=(0,0), r=20, alpha0=-3*np.pi/4., dalpha=np.deg2rad(20), n=5)
+    def p1s(idx): return ( 0., 30.+2*idx, np.pi,    0., 10.)
+    ncases = len(p0s)
+    t1, p1 = 10., ( 0., 30., np.pi,    0., 10.)    # final position
+    def set_case(idx):
+        exp_3.p0 = exp_3.p0s[idx]
+        exp_3.p1 = exp_3.p1s(idx)
+    def label(idx): return f'{idx}'
+        
 class exp_4(exp_0):  # Obstacles  - reference for multi aircraft version
     t0, p0 = 0., ( 0., 0., 0,    0., 10.)    # initial position
     t1, p1 = 6.5, ( 50., 0., 0,    0., 10.)  # final position
@@ -177,39 +190,84 @@ class exp_5(exp_0):
     phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
     name = 'exp5'
 
+
+#
+# formation flight
+#
 class exp_6(exp_0):
-    if 1:
-        p0s = ((0, 10, np.pi/2, 0., 10.),
-           (0, 20, np.pi/2, 0., 10.),
-           (10, 10, np.pi/2, 0., 10.),
-           (10, 20, np.pi/2, 0., 10.),
-           (20, 10, np.pi/2, 0., 10.),
-           (20, 20, np.pi/2, 0., 10.))
-        ncases = len(p0s)
-        p1s = [(0, 50, np.pi, 0., 10.) for _ in range(ncases)]
-    else:
-        alphas = np.linspace(0, 2*np.pi/3, 4) # np.array([0, np.pi/4, np.pi/2]) #
-        c, r = np.array([0, 0]), 20.
-        ps = np.vstack((r*np.cos(alphas), r*np.sin(alphas))).T + c
-        psis = alphas + np.pi/2
-        p0s = [(_p[0], _p[1], _psi, 0, 10) for _p, _psi in zip(ps, psis)]
-        ncases = len(p0s)
-        p1s = [(-40, 80, np.pi/2, 0., 10.) for _ in range(ncases)]
-    #breakpoint()
-    #breakpoint()
-    #((0, 50, np.pi, 0., 10.),
-    #       (0, 50, np.pi, 0., 10.),
-    #       (0, 50, np.pi, 0., 10.),
-    #       (0, 50, np.pi, 0., 10.))
+    ncases = nac = 4
+    vref = 12.
     exp_0.t1 = 15.
     #x_constraint, y_constraint = (-10., 105.), (0, 100)
-    x_constraint, y_constraint = (-50., 105.), (0, 100)
+    #x_constraint, y_constraint = (-50., 105.), (0, 100)
+    x_constraint, y_constraint = None, None
+    seed = 6789; rng = np.random.default_rng(seed)
+    p0s = d2ou.random_states(rng, nac, xlim=(0, 50), ylim=(-50, 0), v=vref)
+    p1s = d2ou.line_formation(nac, (50, 50), np.pi, dx=2.5, dy=2.5, v=vref)
     def set_case(idx): exp_0.p0 = exp_6.p0s[idx]; exp_0.p1 = exp_6.p1s[idx] 
     def label(idx): return f'{idx}'
     name = 'exp6'
-    desc = 'Rendez-vous'
+    desc = '  Rendez-vous, random start, 15s, line formation arrival'
+
+class exp_6_1(exp_6):
+    name = 'exp6_1'
+    desc = 'Rendez-vous, random start, 15s, arrow formation arrival'
+    p1s = d2ou.arrow_formation(exp_6.nac, (50, 50), np.pi, dx=2.5, dy=2.5, v=12.)
+    def set_case(idx): exp_0.p0 = exp_6_1.p0s[idx]; exp_0.p1 = exp_6_1.p1s[idx] 
+
+class exp_6_2(exp_6):
+    name = 'exp6_2'
+    desc = 'Rendez-vous, random start, 15s, diamond formation arrival'
+    p1s = d2ou.diamond_formation(exp_6.nac, (50, 50), np.pi, dx=2.5, dy=2.5, v=12.)
+    def set_case(idx): exp_0.p0 = exp_6_2.p0s[idx]; exp_0.p1 = exp_6_2.p1s[idx]
     
-scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6]
+class exp_6_3(exp_6):
+    ncases = nac = 5
+    name = 'exp6_3'
+    desc = 'Rendez-vous circular start, 15s, arrow formation arrival'
+    c, r, alpha0, dalpha = np.array([0, -25]), 25., -np.pi, np.deg2rad(30.)
+    p0s = d2ou.circle_formation(nac, c, r, alpha0, dalpha, exp_6.vref)
+    p1s = d2ou.arrow_formation(nac, (50, 50), np.pi, dx=2.5, dy=2.5, v=exp_6.vref)
+    def set_case(idx): exp_0.p0 = exp_6_3.p0s[idx]; exp_0.p1 = exp_6_3.p1s[idx] 
+
+class exp_6_4(exp_6_3):
+    name = 'exp6_4'
+    desc = 'Rendez-vous circular start, 20s, arrow formation arrival'
+    t1 = 20.
+
+    
+class exp_6_5(exp_6_3):
+    name = 'exp6_5'
+    desc = 'Rendez-vous, circular start, 30s, arrow formation arrival'
+    t1 = 30.
+    
+class exp_6_6(exp_6_3):
+    name = 'exp6_6'
+    desc = 'Rendez-vous, circular start, 40s, arrow formation arrival'
+    t1 = 40.
+
+class exp_6_7(exp_6_3):
+    name = 'exp6_7'
+    desc = 'Rendez-vous, circular start, alpha0=-pi/2, 20s, arrow formation arrival'
+    t1 = 20.
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    v_constraint = (11., 13.)
+    p0s = d2ou.circle_formation(exp_6_3.nac, exp_6_3.c, exp_6_3.r, -np.pi/2, exp_6_3.dalpha, exp_6.vref)
+    def set_case(idx): exp_0.p0 = exp_6_7.p0s[idx]; exp_0.p1 = exp_6_7.p1s[idx] 
+
+class exp_6_8(exp_6_2):
+    name = 'exp6_8'
+    desc = 'Rendez-vous, circular start, many aircraft, 20s, arrow formation arrival'
+    ncases = nac = 12
+    t1 = 20.
+    p0s = d2ou.circle_formation(nac, exp_6_3.c, exp_6_3.r, -np.pi/2, exp_6_3.dalpha, exp_6.vref)
+    #p1s = d2ou.arrow_formation(nac, (50, 50), np.pi, dx=2.5, dy=2.5, v=exp_6.vref)
+    p1s = d2ou.diamond_formation(nac, (50, 50), np.pi, dx=7.5, dy=5., v=exp_6.vref)
+    def set_case(idx): exp_0.p0 = exp_6_8.p0s[idx]; exp_0.p1 = exp_6_8.p1s[idx] 
+    
+scens = [exp_0, exp_0_1, exp_0_2, exp_0_3,
+         exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5,
+         exp_6, exp_6_1, exp_6_2, exp_6_3, exp_6_4, exp_6_5, exp_6_6, exp_6_7, exp_6_8]
 
 def desc_all(): return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
 

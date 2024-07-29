@@ -193,7 +193,7 @@ class CompositeTraj(Trajectory):
         return Yc
 
 
-
+# FIXME: in factory
 class TabulatedTraj(Trajectory):
     def __init__(self, filename='/tmp/optyplan.npz'):
         pass

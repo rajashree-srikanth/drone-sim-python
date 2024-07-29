@@ -37,6 +37,7 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
     else:
         ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)]
     #np.set_printoptions(precision=2, linewidth=600)
+    print(f"control: {'ppctl' if scen.ppctl else 'dfctl'}")
    
     Xs, Us, Yrefs = [], [], []
     for traj, aircraft, X0, ctl, pert in zip(scen.trajs, aircrafts, scen.X0s, ctls, scen.perts):
@@ -45,10 +46,12 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
         
     if show_2d:
         d2plot.plot_trajectory_2d(scen.time, X, U, Yref)
+        
     if show_chrono:
         #ctls[0].draw_debug(_f, _a)
         d2plot.plot_trajectories_chrono(scen.time, Xs, Us, Yrefs)
-        
+        Xr =  np.array(ctls[0].Xref)
+        d2plot.plot_control_chrono(scen.time, X=X, U=U, Yref=None, Xref=Xr)
         
     if show_anim:
         extra = [np.array(ctl.carrot), np.array(ctl.ref_pos)] if show_extra else None
@@ -60,6 +63,7 @@ def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
         #dda.save_anim('/home/poine/tmp/foo.gif', anim, 0.01)
 
     else: anim=None
+    
     return anim
 
 

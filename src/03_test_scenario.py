@@ -95,7 +95,7 @@ def main():
         print('unknown scenario {}'.format(args.scen))
         return
     anim = test_scenario(scen, show_Yref=args.Y, show_Xref=args.X, show_anim=args.anim, show_2d=args.twod)
-    if 1:
+    if 0:
         save='/tmp/optyplan_5.apng'
         dda.save_anim(save, anim, 0.01)
     plt.show()

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import d2d.guidance as ddg
 import d2d.dynamic as ddd
+import d2d.utils as d2u
 
 def ensure_yspan(ax, yspan):
     ymin, ymax = ax.get_ylim()
@@ -35,7 +36,7 @@ def plot_trajectory_2d(time, X=None, U=None, Yref=None, Xref=None, _f=None, _a=N
     #breakpoint()
     decorate(_a, title='2D', legend=True)
     _a.axis('equal')
-    _f.canvas.set_window_title('2D trajectory')
+    _f.canvas.manager.set_window_title('2D trajectory')
     return _f, _a
 
 def plot_trajectories_chrono(time, Xs=None, Us=None, Yrefs=None, Xrefs=None, _f=None, _a=None, title=None):
@@ -72,7 +73,7 @@ def plot_trajectory_chrono(time, X=None, U=None, Yref=None, Xref=None, _f=None, 
     if Xref is not None: _a[2,0].plot(time, np.rad2deg(Xref[:, ddd.Aircraft.s_phi]), label='reference')
     if U is not None: _a[2,0].plot(time, np.rad2deg(U[:,ddd.Aircraft.i_phi]), label='setpoint')
     decorate(_a[2,0], title='$\phi$', xlab='s', ylab='deg', legend=True, min_yspan=0.1)
-    if title is not None: _f.canvas.set_window_title(title)
+    if title is not None: _f.canvas.manager.set_window_title(title)
     #_f.canvas.set_window_title('State trajectory')
     return _f, _a
 
@@ -84,8 +85,32 @@ def plot_flat_output_trajectory_chrono(time, Yref, _f=None, _a=None, label='ref'
         decorate(_a[_i,0], title=f'$x^{{({_i})}}$', xlab='s', ylab=f'$m/s^{{{_i}}}$', legend=True)
         _a[_i,1].plot(time, Yref[:,_i,ddg.Trajectory.cy], label=label)
         decorate(_a[_i,1], title=f'$y^{{({_i})}}$', xlab='s', ylab=f'$m/s^{{{_i}}}$', legend=True)
-    _f.canvas.set_window_title('Flat output trajectory')
+    _f.canvas.manager.set_window_title('Flat output trajectory')
     return _f, _a
 
 
+
+
+def plot_control_chrono(_time, X=None, U=None, Yref=None, Xref=None, _f=None, _a=None, label=''):
+    _f = plt.figure(tight_layout=True, figsize=[16., 9.]) if _f is None else _f
+    _a = _f.subplots(2, 2) if _a is None else _a
+    pos, pos_ref = X[:, ddd.Aircraft.s_slice_pos], Xref[:, ddd.Aircraft.s_slice_pos]
+    psi, psi_ref = X[:, ddd.Aircraft.s_psi], Xref[:, ddd.Aircraft.s_psi]
+    phi, va = X[:, ddd.Aircraft.s_phi], X[:, ddd.Aircraft.s_va]
+    err_poss = pos-pos_ref
+    err_dist = np.linalg.norm(err_poss, axis=1)
+    err_psi = psi - psi_ref
+    err_psi = np.array([d2u.norm_mpi_pi(_psi) for _psi in err_psi])
+    #breakpoint()
+    
+    _a[0,0].plot(_time, err_dist, label=label)
+    decorate(_a[0,0], title='distance error', xlab='s', ylab='m', legend=True, min_yspan=0.1)
+    _a[0,1].plot(_time, np.rad2deg(err_psi), label=label)
+    decorate(_a[0,1], title='course error', xlab='s', ylab='deg', legend=True, min_yspan=0.1)
+    _a[1,0].plot(_time, np.rad2deg(phi), label=label)
+    decorate(_a[1,0], title='$\phi$', xlab='s', ylab='deg', legend=True, min_yspan=0.1)
+    _a[1,1].plot(_time, va, label=label)
+    decorate(_a[1,1], title='$va$', xlab='s', ylab='m/s', legend=True, min_yspan=0.1)
+    _f.canvas.manager.set_window_title('Control')
+    return _f, _a
 

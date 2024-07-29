@@ -144,13 +144,50 @@ class CostCollision: #
         grad[_p._slice_y[1]] =  _p.obj_scale/_p.num_nodes* 2.*dy*es
         return grad
 
+
+class CostCollision2: #
+    def __init__(self, r=3., k=2.):
+        self.r, self.k = r, k
+    def cost(self, free, _p):
+        nac = _p.acs.nb_aicraft
+        if nac < 2: return 0.
+        cs = np.zeros((nac, nac))
+        for ac0 in range(nac-1):
+            for ac1 in range(ac0+1, nac):
+                ac1x, ac1y = free[_p._slice_x[ac1]], free[_p._slice_y[ac1]]
+                ac0x, ac0y = free[_p._slice_x[ac0]], free[_p._slice_y[ac0]]
+                dx, dy = ac0x-ac1x, ac0y-ac1y
+                d2 = np.square(dx/self.r*self.k)+np.square(dy/self.r*self.k)
+                cs[ac0, ac1] = np.sum(np.exp(-d2))
+        #breakpoint()
+        return _p.obj_scale/_p.num_nodes * np.sum(cs)
+
+    def cost_grad(self, free, _p):
+        nac = _p.acs.nb_aicraft
+        grad = np.zeros_like(free)
+        if nac < 2: return grad
+        for ac0 in range(nac-1):
+            for ac1 in range(ac0+1, nac):
+                ac1x, ac1y = free[_p._slice_x[ac1]], free[_p._slice_y[ac1]]
+                ac0x, ac0y = free[_p._slice_x[ac0]], free[_p._slice_y[ac0]]
+                dx, dy = ac0x-ac1x, ac0y-ac1y
+                d2 = np.square(dx/self.r*self.k)+np.square(dy/self.r*self.k)
+                es = np.exp(-d2)
+                grad[_p._slice_x[ac0]] -= 2.*dx*es 
+                grad[_p._slice_y[ac0]] -= 2.*dy*es
+                grad[_p._slice_x[ac1]] += 2.*dx*es 
+                grad[_p._slice_y[ac1]] += 2.*dy*es
+        grad *= (_p.obj_scale/_p.num_nodes)
+        return grad
+
+    
     
 class CostComposit:
     def __init__(self, kvel=1., kbank=1., kobs=float('Nan'), kcol=float('NaN'), vsp=10., obss=[], obs_kind=0, rcol=3.):
         self.kvel, self.kbank, self.kobs, self.kcol = kvel, kbank, kobs, kcol
         self.ci = CostInput(vsp, kvel, kbank)
         if kobs is not float('NaN'): self.cobs = CostObstacles(obss, obs_kind)
-        if kcol is not float('NaN'): self.ccol = CostCollision(r=rcol)
+        if kcol is not float('NaN'): self.ccol = CostCollision2(r=rcol)
         
         
     def cost(self, free, _p):

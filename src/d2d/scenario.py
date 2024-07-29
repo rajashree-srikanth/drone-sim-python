@@ -98,8 +98,8 @@ register(ScenLine2)
 
 class ScenCircle(Scenario):
     name = 'circle'
-    desc = 'circle'
-    def __init__(self, duration=None, cst_gvel=False):
+    desc = 'circle1'
+    def __init__(self, duration=None, cst_gvel=True):
         Y0, Y1 = [0,25], [200, 25]
         if cst_gvel:
             self.trajs = [ddt.TrajectoryCircle(alpha0=3*np.pi/2)]
@@ -109,13 +109,15 @@ class ScenCircle(Scenario):
         self.extends = (-10, 75, -10, 75) # _xmin, _xmax, _ymin, _ymax
         #self.windfield = d2guid.WindField([0, 0])
         #self.windfield = d2guid.WindField([2.5, 0])
-        self.windfield = d2guid.WindField([5, 0])
+        self.windfield = d2guid.WindField([0, 0])
         #duration = duration or 30.
         #duration = duration or 30.
         #self.time = np.arange(0, duration, 0.01)
         self.time = np.arange(0, self.trajs[0].duration, 0.01)
 
         #breakpoint()
+        if 1:
+            self.X0s = [[20, -5, 0, np.deg2rad(18.), 10.]] 
         if 0:
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 5.]] # for the 5m/s windfield
         if 0:
@@ -279,9 +281,9 @@ class ScenDualOpty(Scenario):
     name = "dual opty"
     desc = "dual opty"
     def __init__(self):
-       self.trajs = [ddtf.TrajTabulated('optyplan_exp6_0.npz'),
-                     ddtf.TrajTabulated('optyplan_exp6_1.npz'),
-                     ddtf.TrajTabulated('optyplan_exp6_2.npz')]
+       self.trajs = [ddtf.TrajTabulated('cache/optyplan_exp6_2_0.npz'),
+                     ddtf.TrajTabulated('cache/optyplan_exp6_2_1.npz'),
+                     ddtf.TrajTabulated('cache/optyplan_exp6_2_2.npz')]
        Scenario.__init__(self)
         
 register(ScenDualOpty)
@@ -298,7 +300,25 @@ class ScenOpty2(Scenario):
        Scenario.__init__(self)
         
 register(ScenOpty2)
-         
+
+class ScenOptyNew(Scenario):
+    name = "optyNG"
+    desc = "optyNG"
+    def __init__(self):
+        if 1:
+            self.trajs =  [ddtf.TrajTabulated('cache/optyplan_exp0.npz')]
+        if 0:
+            self.trajs =  [ddtf.TrajTabulated('cache/optyplan_exp6_7_4.npz')]
+        if 0:
+             self.trajs = [ddtf.TrajTabulated('cache/optyplan_exp6_7_0.npz'),
+                           ddtf.TrajTabulated('cache/optyplan_exp6_7_1.npz'),
+                           ddtf.TrajTabulated('cache/optyplan_exp6_7_2.npz'),
+                           ddtf.TrajTabulated('cache/optyplan_exp6_7_3.npz'),
+                           ddtf.TrajTabulated('cache/optyplan_exp6_7_4.npz')]
+        Scenario.__init__(self)
+
+register(ScenOptyNew)
+
 def print_available():
     print('Available scenarios:')
     for i, n in enumerate(list_available()): print(f'{i} -> {n}')

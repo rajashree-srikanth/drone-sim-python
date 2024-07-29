@@ -49,19 +49,20 @@ class DiffFlatness:
 import control
 
 class DFFFController:
-    def __init__(self, traj, ac, wind):
+    def __init__(self, traj, ac, wind, record=True):
         self.traj, self.ac, self.wind = traj, ac, wind
         self.dt = 0.01
         self.time = np.arange(0, traj.duration, self.dt)
         self.carrot, self.ref_pos = [0,0], [0,0]
-        self.Xref = []
-        self.K = []
-        
+        self.record = record
+        if self.record:
+            self.t, self.X, self.Xref, self.K, self.U = [], [], [], [], []
+        self.disable_feedback = False
+            
     def get(self, X, t):
         Yref = self.traj.get(t)
         W = self.wind.sample(t, Yref[0])
         Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
-        self.Xref.append(Xr)
         dX = X - Xr
         dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
         err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
@@ -74,17 +75,24 @@ class DFFFController:
             (K, X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
         else: # dim 3 feedback
             A1,B1 = A[:3,:3], A[:3,3:]
-            Q, R = [1, 1, 0.1], [8, 1]
+            Q, R = [1, 1, 0.1], [2, 1]
             (K1, X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
             K=np.zeros((2,5))
             K[:,:3]=K1
-        self.K.append(K)
         #valp2, vectp2 =  np.linalg.eig(A-np.dot(B, K))
         dU = -np.dot(K, dX)
-        U = U1 = Ur + dU
-        phisat, vmin, vmax = np.deg2rad(45), 4, 20
+        U = Ur
+        if not self.disable_feedback: U += dU
+        #phisat, vmin, vmax = np.deg2rad(30), 9, 15
+        phisat, vmin, vmax = np.deg2rad(45), 9, 15
         U = np.clip(U, [-phisat, vmin], [phisat, vmax])
         #print(valp2, K, U1, U)
+        if self.record:
+            self.t.append(t)
+            self.X.append(X)
+            self.Xref.append(Xr)
+            self.K.append(K)
+            self.U.append(U)
         return U
 
     def draw_debug(self, _f, _a, time):
@@ -129,47 +137,53 @@ class VelControler:
         return v
     
 class PurePursuitControler:
-    def __init__(self, traj):
+    def __init__(self, traj, record=True):
         self.traj = traj
-        if 0:
-            t0, t1, dt = 0, 60, 0.01 # FIXME
-            self.time = np.arange(t0, t1, dt)
-        else:
-            #print(traj.duration)
-            dt = 0.01
-            self.time = np.arange(0, traj.duration, dt)
-
+        dt = 0.01
+        self.time = np.arange(0, traj.duration, dt)
         self.pts_2d = np.array([traj.get(t)[0] for t in self.time])
+        self.vel_2d = np.array([traj.get(t)[1] for t in self.time])
         self.sat_phi = np.deg2rad(45.)
         self.ref_pos, self.carrot = [], []
         self.vel_ctl = VelControler()
         self.control_vel = False#True
+        self.record = record
+        if self.record:
+            self.t, self.X, self.Xref, self.K, self.U = [], [], [], [], []
         
     def get(self, X, t):#, time):
         dists = np.linalg.norm(self.pts_2d-X[:ddyn.Aircraft.s_y+1], axis=1)
         idx_closest = np.argmin(dists)
         self.ref_pos.append(self.pts_2d[idx_closest])
         t0, t1 = self.time[idx_closest], t
-        #print(f'{t0:.1f}, {t1:.1f} {t0 - t1:.1f}')
         tself = self.time[idx_closest]
-        if 1:
-            lookahead_m, dt, v = 10, 0.01, 10 # lookahaead in m, dt in sec, v in m/s
-            #idx_carrot = min(idx_closest + int(lookahead_m/v/dt), len(self.pts_2d)-1)
-            idx_carrot = idx_closest + int(lookahead_m/v/dt)
-            if idx_carrot >= len(self.pts_2d):
-                idx_carrot -= len(self.pts_2d)
-            carrot = self.pts_2d[idx_carrot]
-        else:
-            lookahead_s = 2.
-            carrot = self.traj.get(t+lookahead_s)[0] 
+
+        lookahead_m, dt, v = 20, 0.01, 10 # lookahaead in m, dt in sec, v in m/s
+        #idx_carrot = min(idx_closest + int(lookahead_m/v/dt), len(self.pts_2d)-1)
+        idx_carrot = idx_closest + int(lookahead_m/v/dt)
+        if idx_carrot >= len(self.pts_2d):
+            idx_carrot -= len(self.pts_2d)
+        carrot = self.pts_2d[idx_carrot]
+        xref, yref = self.pts_2d[idx_closest][0], self.pts_2d[idx_closest][1]
+        psiref =  np.arctan2(self.vel_2d[idx_closest][1], self.vel_2d[idx_closest][0])
+        phi, v = 0., 12.
+        Xref = [xref, yref, psiref, phi, v]
+
         self.carrot.append(carrot)
         pc = carrot-X[ddyn.Aircraft.s_slice_pos]
         err_psi = norm_mpi_pi(X[2] - np.arctan2(pc[1], pc[0]))
-        K= 1.#0.2
+        K= 0.2 #1.#0.2
         phi_sp = -K*err_psi
         phi_sp = np.clip(phi_sp, -self.sat_phi, self.sat_phi)
-        v_sp = self.vel_ctl.get(tself, t) if self.control_vel else 10
-        return [phi_sp, v_sp]
+        v_sp = self.vel_ctl.get(tself, t) if self.control_vel else 12.
+        U = [phi_sp, v_sp]
+        if self.record:
+            self.t.append(t)
+            self.X.append(X)
+            self.Xref.append(Xref)
+            #self.K.append(K)
+            self.U.append(U)
+        return  U
 
     
 

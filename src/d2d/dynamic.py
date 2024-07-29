@@ -32,8 +32,10 @@ class Aircraft:
         g = self.g
         spsi, cpsi = np.sin(psi), np.cos(psi)
         cphi2, tan_phi = np.cos(phi)**2, np.tan(phi)
+        ' il manque un moins dans le jacobien?'
         A = np.array([ [0., 0., -va*spsi, 0.            , cpsi],
                        [0., 0.,  va*cpsi, 0.            , spsi],
+                       #[0., 0.,  0.,      g/va/(1+cphi2), -g/va**2*tan_phi],
                        [0., 0.,  0.,      g/va/(1+cphi2), g/va**2*tan_phi],
                        [0., 0.,  0.,     -1/self.tau_phi, 0],
                        [0., 0.,  0.,      0.,             -1/self.tau_v]])

@@ -39,13 +39,13 @@ register(TrajTwoLines)
 class TrajSquare(ddt.CompositeTraj):
     name = "square"
     desc = "example of composite trajectory"
-    extends = (-10, 60, -10, 60)  # _xmin, _xmax, _ymin, _ymax
-    def __init__(self):
-        Y0, Y1, Y2, Y3 = [0,0], [50, 0], [50, 50], [0, 50]
-        s1 = ddt.TrajectoryLine(Y0, Y1, v=10., t0=0.)
-        s2 = ddt.TrajectoryLine(Y1, Y2, v=10., t0=s1.duration)
-        s3 = ddt.TrajectoryLine(Y2, Y3, v=10., t0=s1.duration+s2.duration)
-        s4 = ddt.TrajectoryLine(Y3, Y0, v=10., t0=s1.duration+s2.duration+s3.duration)
+    extends = (-10, 110, -10, 110)  # _xmin, _xmax, _ymin, _ymax
+    def __init__(self, v=12.):
+        Y0, Y1, Y2, Y3 = [0,0], [100, 0], [100, 100], [0, 100]
+        s1 = ddt.TrajectoryLine(Y0, Y1, v=v, t0=0.)
+        s2 = ddt.TrajectoryLine(Y1, Y2, v=v, t0=s1.duration)
+        s3 = ddt.TrajectoryLine(Y2, Y3, v=v, t0=s1.duration+s2.duration)
+        s4 = ddt.TrajectoryLine(Y3, Y0, v=v, t0=s1.duration+s2.duration+s3.duration)
         ddt.CompositeTraj.__init__(self, [s1, s2, s3, s4])
 register(TrajSquare)       
 
@@ -149,10 +149,17 @@ class TrajTabulated(ddt.Trajectory):
     name = "tabulated"
     desc = "tabulated"
     extends = (-5, 25, -10, 20)  # _xmin, _xmax, _ymin, _ymax
-    def __init__(self, filename='./optyplan_exp0.npz'):
+    def __init__(self, filename='./cache/optyplan_exp0.npz'):
         _data =  np.load(filename)
         labels = ['sol_time', 'sol_x', 'sol_y', 'sol_psi', 'sol_phi', 'sol_v', 'wind']
         self.sol_time, self.sol_x, self.sol_y, self.sol_psi, self.sol_phi, self.sol_v, self.wind = [_data[k] for k in labels]
+        dt = self.sol_time[1] - self.sol_time[0]
+        self.sol_x1 = np.gradient(self.sol_x) / dt
+        self.sol_y1 = np.gradient(self.sol_y) / dt
+        self.sol_x2 = np.gradient(self.sol_x1) / dt
+        self.sol_y2 = np.gradient(self.sol_y1) / dt
+        self.sol_x3 = np.gradient(self.sol_x2) / dt
+        self.sol_y3 = np.gradient(self.sol_y2) / dt
         print(f'loaded {filename}')
         self.t0 = 0.
         self.duration = self.sol_time[-1]
@@ -164,9 +171,16 @@ class TrajTabulated(ddt.Trajectory):
         Yc[0,0] = self.sol_x[idx] 
         Yc[0,1] = self.sol_y[idx]
         (wx, wy), v, psi = self.wind[idx], self.sol_v[idx], self.sol_psi[idx]
-        Yc[1,0] = v * np.cos(psi) + wx
-        Yc[1,1] = v * np.sin(psi) + wy
-        #breakpoint()
+        #Yc[1,0] = v * np.cos(psi) + wx
+        #Yc[1,1] = v * np.sin(psi) + wy
+        ###breakpoint()
+        Yc[1,0] = self.sol_x1[idx]
+        Yc[1,1] = self.sol_y1[idx]
+        Yc[2,0] = self.sol_x2[idx]
+        Yc[2,1] = self.sol_y2[idx]
+        Yc[3,0] = self.sol_x3[idx]
+        Yc[3,1] = self.sol_y3[idx]
+
         return Yc
 
 register(TrajTabulated) 
@@ -304,6 +318,24 @@ class TrajSiSpline(ddt.SpaceIndexedTraj):
         
         
 register(TrajSiSpline)
+
+class Triangle(ddt.CompositeTraj):
+    name = "Triangle"
+    desc = "Triangle"
+    def __init__(self, p0=[0, 0, 0, 0, 12.], p1=[100, 0, 0, 0, 12.], va=12., duration=40, cw=1):
+        p0p1 = p1[:2]-p0[:2]
+        d = np.linalg.norm(p0p1)                # distance between start and end
+        u = p0p1/d; v = np.array([-u[1], u[0]]) # unit and normal vectors
+        D = va*duration                         # distance to be traveled
+        p2 = p0[:2] + p0p1/2.                   # center of the direct start-end leg
+        if D > d:                               # We have time to spare, let make an isocele triangle
+            p2 += np.sign(cw) * np.sqrt(D**2-d**2)/2 * v
+        s1 = ddt.TrajectoryLine(p0[:2], p2, v=va, t0=0.)
+        s2 = ddt.TrajectoryLine(p2, p1[:2], v=va, t0=s1.duration)
+        #breakpoint()
+        ddt.CompositeTraj.__init__(self, [s1, s2])
+
+
 
 
 def print_available():
