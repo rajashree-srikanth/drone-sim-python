@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import pandas as pd
 
 import d2d.dynamic as ddyn
 import d2d.guidance as ddg
@@ -164,6 +165,8 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
             return (line)
         
         ani = animation.FuncAnimation(fig=fig, func=update, frames=len(time), interval=1)
+        writervideo = animation.FFMpegWriter(fps=60)
+        # ani.save('circular_formation.avi',writer=writervideo)
         plt.show()
 
 def main():
@@ -177,6 +180,21 @@ def main():
     X_array, U_array, time, U1, U2, Ur, e_theta_arr = CircularFormationGVF(c, r, n_ac, t_end)
     theta_ref = np.arange(0, 2*np.pi, 0.01)
     Y_ref = [r*np.cos(theta_ref), r*np.sin(theta_ref)]
+    
+    # converting 3d array X_array to 2d before exporting to csv
+    # states = time[:, np.newaxis]
+    symbols = ['x', 'y', 'psi', 'phi', 'v']
+    states = {"time": time}
+    for i in range(n_ac):
+        for j in range(len(symbols)):
+            states[f'{symbols[j]}_{i+1}'] = list(X_array[:, i, j])
+    breakpoint()
+    
+    
+    # # exporting results to csv file
+    df = pd.DataFrame(states)
+    df.to_csv(r"states_over_time.csv", index=False)
+    
     # plotting results
     # d2plot.plot_trajectory_2d(time, X_array, [U_array,0], Y_ref)
     plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr)
