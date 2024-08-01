@@ -30,8 +30,8 @@ def main():
     Ydd_ref_array = np.zeros((len(time),n_ac,2))
     X_array = np.zeros((len(time),n_ac,5))
     
-    traj = dtraj.TrajectoryCircle()
-    X1 = np.array([0.5,30,-np.pi/2,0,10]) # initial state conditions
+    traj = dtraj.TrajectoryCircle(c=[0,0])
+    X1 = np.array([0,30,0,0,10]) # initial state conditions
     
     for i in range(n_ac): # creating aircraft class instances 
         aircraft.append(ddyn.Aircraft())
@@ -60,7 +60,7 @@ def main():
     plt.plot(X_array[:,0,0], X_array[:,0,1], label='actual')
     plt.plot(Y_ref_array[:, 0, 0], Y_ref_array[:, 0, 1], label='ref')
     plt.title("traj")
-    # plt.legend()
+    plt.legend()
     # plt.figure(2)
     # plt.plot(time, X_array[:,0,0])
     # plt.title("time, x computed")
@@ -77,16 +77,16 @@ def main():
     # plt.plot(time, X_array[:,0,4],label="Measured")
     # plt.legend()
     # plt.title("u_v computed computed VS measured")
-    plt.figure(6)
-    plt.plot(time, Y_ref_array[:, 0, 0], label="Yrefx")
-    plt.plot(time, Yd_ref_array[:, 0, 0], label="Ydrefx")
-    plt.plot(time, Ydd_ref_array[:, 0, 0], label="Yddrefx")
-    plt.legend()
-    plt.figure(7)
-    plt.plot(time, Y_ref_array[:, 0, 1], label="Yrefy")
-    plt.plot(time, Yd_ref_array[:, 0, 1], label="Ydrefy")
-    plt.plot(time, Ydd_ref_array[:, 0, 1], label="Yddrefy")
-    plt.legend()
+    # plt.figure(6)
+    # plt.plot(time, Y_ref_array[:, 0, 0], label="Yrefx")
+    # plt.plot(time, Yd_ref_array[:, 0, 0], label="Ydrefx")
+    # plt.plot(time, Ydd_ref_array[:, 0, 0], label="Yddrefx")
+    # plt.legend()
+    # plt.figure(7)
+    # plt.plot(time, Y_ref_array[:, 0, 1], label="Yrefy")
+    # plt.plot(time, Yd_ref_array[:, 0, 1], label="Ydrefy")
+    # plt.plot(time, Ydd_ref_array[:, 0, 1], label="Yddrefy")
+    # plt.legend()
     plt.show()
 
 # there seems to be an issue in this controller too?

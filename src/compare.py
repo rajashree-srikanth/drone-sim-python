@@ -61,9 +61,9 @@ for i in range(1, len(time)):
         Yd_ref_array_n[i-1][j] = Yd_ref
         Ydd_ref_array_n[i-1][j] = Ydd_ref
         X = X_array_n[i-1, j, :]
-        Xr, Ur = flat_n.ComputeFlatness(t, Y_ref, Yd_ref, Ydd_ref)
+        Xr, Ur = flat_n.ComputeFlatness(t, Y_ref, Yd_ref, Ydd_ref, 0)
         ctrl = dct.DiffController(w)
-        Xr, Ur, U = ctrl.ComputeGain(t, X, Y_ref, Yd_ref, Ydd_ref, ac)
+        Xr, Ur, U = ctrl.ComputeGain(t, X, Y_ref, Yd_ref, Ydd_ref, 0, ac)
         Un = U
         # if t==0:
         #     # print(U-Un, "U")
