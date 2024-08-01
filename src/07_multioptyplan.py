@@ -110,7 +110,6 @@ class Planner:
         
         return initial_guess
             
-        
 
     def interpret_solution(self):
         self.sol_time = np.linspace(0.0, self.duration, num=self.num_nodes)
@@ -379,15 +378,32 @@ class exp_5_1(exp_5): # testing collisions
     initial_guess = 'tri'
     #initial_guess = 'rnd'
 
-
-
-    
-
+class gvf_trial_3ac(exp_5):
+   name = 'gvf_trial_3ac'
+   desc = 'Circular formation with 3 aircraft - trial'
+   hz = 10
+   t1 = 11 # 14.2
+   vref = 14
+   dpsi = 0
+#    p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(0), 0, 12), (0, -40, np.deg2rad(0), 0, 12), (-40, 0, np.deg2rad(0), 0, 12))
+   p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(-90), 0, 12), (0, -40, np.deg2rad(180), 0, 12), (-40, 0, np.deg2rad(90), 0, 12))
+   p1s = ((75, 30, 0, 0, 12), (100, 20, 0, 0, 12), (75, -30, 0, 0, 12), (100, -20, 0, 0, 12))
+   x_constraint = (-150, 150)
+   y_constraint = (-150, 150)
+   initial_guess = 'tri'
+   ncases = 1
+   
+   # wind
+#    wind = d2ou.WindField([5,2])
+   
+   cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=vref, obss=[], obs_kind=0, rcol=10), 1.e0
+   
+   
     
 scens = [exp_0, exp_0_1, exp_1, exp_1_0, exp_1_1, exp_2,
          exp_3, exp_3_1,
          exp_4, exp_4_1, exp_4_2,
-         exp_5, exp_5_1]
+         exp_5, exp_5_1, gvf_trial_3ac]
 def desc_all_scens():
     return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
 def get_scen(idx): return scens[idx]

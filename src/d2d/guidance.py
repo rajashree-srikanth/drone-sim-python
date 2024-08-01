@@ -6,7 +6,7 @@ from d2d.trajectory import Trajectory
 import d2d.dynamic as ddyn
 from d2d.dynamic import Aircraft
 
-
+# setting angle limits
 def norm_mpi_pi(v): return ( v + np.pi) % (2 * np.pi ) - np.pi
 
 class WindField: # initializes wind vel = 0 unless specifed in scenario
@@ -18,13 +18,14 @@ class WindField: # initializes wind vel = 0 unless specifed in scenario
         r = f'{self.w} m/s'
         return r
 
- 
+ # generating the differential flatness for the required reference trajectory
 class DiffFlatness:
     def state_and_input_from_output(Ys, W, ac):
         X, U, Xdot = [np.zeros(_l) for _l in [Aircraft.s_size, Aircraft.i_size, Aircraft.s_size]]
         x, y = Ys[0, Trajectory.cx], Ys[0, Trajectory.cy]
         xd, yd = Ys[1,Trajectory.cx], Ys[1,Trajectory.cy]
         xdd, ydd = Ys[2,Trajectory.cx], Ys[2,Trajectory.cy]
+        # breakpoint()
         X[Aircraft.s_x], X[Aircraft.s_y] = x, y         # x, y
         vax, vay = xd - W[0], yd - W[1]         
         va2 = vax**2+vay**2; va = np.sqrt(va2)
@@ -41,13 +42,13 @@ class DiffFlatness:
         #Xdot[Aircraft.s_phi] # phi_dot
         U[Aircraft.i_phi] = ac.tau_phi * Xdot[Aircraft.s_phi] + X[Aircraft.s_phi]
         U[Aircraft.i_va] = ac.tau_v * Xdot[Aircraft.s_va] + X[Aircraft.s_va]
-        
+        # breakpoint()
         
         return X, U, Xdot
 
 
 import control
-
+# the guidance loop of the differential controller - tracking of the required ref traj
 class DFFFController:
     def __init__(self, traj, ac, wind):
         self.traj, self.ac, self.wind = traj, ac, wind
@@ -59,22 +60,22 @@ class DFFFController:
         
     # the controller definition and how it works, or what it does    
     def get(self, X, t):
-        Yref = self.traj.get(t) 
+        Yref = self.traj.get(t)
         W = self.wind.sample(t, Yref[0])
         Xr, Ur, Xrdot = DiffFlatness.state_and_input_from_output(Yref, W, self.ac)
         self.Xref.append(Xr)
         dX = X - Xr
         dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
-        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
-        dX = np.clip(dX, -err_sats, err_sats)
-        A, B = self.ac.cont_jac(Xr, Ur, t, W)
+        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1]) # specifying saturation limits
+        dX = np.clip(dX, -err_sats, err_sats) # limiting array values within saturation limits
+        A, B = self.ac.cont_jac(Xr, Ur, t, W) # obtaining locally linearized model matrices
         #val_p, vect_p = np.linalg.eig(A)
         #print(val_p)
         if 0: # dim 5 feedback
             Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
             (K, X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
         else: # dim 3 feedback
-            A1,B1 = A[:3,:3], A[:3,3:]
+            A1,B1 = A[:3,:3], A[:3,3:] # ignoring phi and theta for feedback ?!
             Q, R = [1, 1, 0.1], [8, 1]
             (K1, X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
             K=np.zeros((2,5))
@@ -86,6 +87,7 @@ class DFFFController:
         phisat, vmin, vmax = np.deg2rad(45), 4, 20
         U = np.clip(U, [-phisat, vmin], [phisat, vmax])
         #print(valp2, K, U1, U)
+        # breakpoint()
         return U
 
     def draw_debug(self, _f, _a, time):
