@@ -5,7 +5,7 @@ import collections
 import opty.direct_collocation
 import d2d.ploting as d2p
 
-def planner_timing(t0, t1, hz):
+def planner_timing(t0, t1, hz): # discretization of the time for initial trajectory
    duration  = t1 - t0
    num_nodes = int(duration*hz)+1
    time_step = 1./hz
@@ -27,6 +27,7 @@ class WindField:
    def __str__(self): return f'{self.w} m/s'
 
 # Symbols for one aircraft (time, state, input)
+# returns equations of motion in symbolic notation
 class Aircraft:
     def __init__(self, st=None, id=''):
         self._st = st or sym.symbols('t')
@@ -34,13 +35,15 @@ class Aircraft:
         self._state_symbols = (self._sx(self._st), self._sy(self._st), self._spsi(self._st))
         self._input_symbols = (self._sv, self._sphi)
 
-    def get_eom(self, atm, g=9.81):
+    def get_eom(self, atm, g=9.81): # symbolic form of equations of motion
+    # atm - instance of WindField class    
         wx, wy = atm.sample_sym(self._st, self._sx(self._st), self._sy(self._st))
         if 1:
             eq1 = self._sx(self._st).diff() - self._sv(self._st) * sym.cos(self._spsi(self._st)) + wx
             eq2 = self._sy(self._st).diff() - self._sv(self._st) * sym.sin(self._spsi(self._st)) + wy
             eq3 = self._spsi(self._st).diff() - g / self._sv(self._st) * sym.tan(self._sphi(self._st))
         else: # constant speed attempt
+            # YET TO BE COMPLETED - THIS IS WHAT WE REQUIRE IN THE END
             eq1 = self._sx(self._st).diff() - self._sv * sym.cos(self._spsi(self._st)) + wx
             eq2 = self._sy(self._st).diff() - self._sv * sym.sin(self._spsi(self._st)) + wy
             eq3 = self._spsi(self._st).diff() - g / self._sv * sym.tan(self._sphi(self._st))
@@ -50,7 +53,7 @@ class Aircraft:
 
 # Cost functions
 class CostAirVel: # constant air velocity
-    def __init__(self, vsp=10.):
+    def __init__(self, vsp=10.): # assumes flight velocity = 10 m/s  unless specified otherwise
         self.vsp = vsp
         
     def cost(self, free, _p):
@@ -61,6 +64,7 @@ class CostAirVel: # constant air velocity
         grad = np.zeros_like(free)
         grad[_p._slice_v] = _p.obj_scale/_p.num_nodes*2*dvs
         return grad
+
 class CostBank:  # max bank or mean squared bank 
     use_mean = True
     def cost(self, free, _p):

@@ -28,7 +28,7 @@ class Aircraft:
         return Xkp1
 
 
-
+# locally linearized dynamic state model
     def cont_jac(self, Xr, Ur, t, W):
         psi, phi, va = Xr[Aircraft.s_psi], Xr[Aircraft.s_phi], Xr[Aircraft.s_va]
         g = self.g

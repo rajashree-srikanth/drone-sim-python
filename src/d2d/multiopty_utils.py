@@ -7,6 +7,7 @@ import d2d.ploting as d2p
 import d2d.opty_utils as d2ou
 
 class AircraftSet:
+    # creating an array of class instances for each aircraft
     def __init__(self, n=2):
         self.st = sym.symbols('t')
         self.nb_aicraft = n

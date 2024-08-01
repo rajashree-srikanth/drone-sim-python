@@ -31,6 +31,7 @@ class Planner:
         self.wind = exp.wind
         self.aircraft = _g = d2ou.Aircraft()
  
+        # slice sequence - to extract the different states
         self._slice_x   = slice(0*self.num_nodes, 1*self.num_nodes, 1)
         self._slice_y   = slice(1*self.num_nodes, 2*self.num_nodes, 1)
         self._slice_psi = slice(2*self.num_nodes, 3*self.num_nodes, 1)
@@ -57,7 +58,7 @@ class Planner:
 
         self.obstacles = exp.obstacles
         obj = exp.cost
-        if initialize:
+        if initialize: # if initialize is true
             self.prob =  opty.direct_collocation.Problem(lambda _free: obj.cost(_free, self),
                                                          lambda _free: obj.cost_grad(_free, self),
                                                          _g.get_eom(self.wind),
@@ -80,6 +81,7 @@ class Planner:
         initial_guess = np.zeros(self.prob.num_free)
         if kind=='rnd': # random positions
             rng = np.random.default_rng(seed)
+            # constraints on x and y, and psi as well
             cx, cy = self.exp.x_constraint, self.exp.y_constraint
             if cx is None: cx = [-100, 100]
             initial_guess[self._slice_x] = rng.uniform(cx[0],cx[1], self.num_nodes)
@@ -93,7 +95,7 @@ class Planner:
             u = p0p1/d; v = np.array([-u[1], u[0]]) # unit and normal vectors
             D = self.exp.vref*self.duration # distance to be traveled during scenario
             p3 = p0 + p0p1/2
-            if D > d: # We have time to spare, let make an isocele triangle
+            if D > d: # We have time to spare, let make an isoceles triangle
                 p3 -= np.sqrt(D**2-d**2)/2*v
             n1 = int(self.num_nodes/2); n2 = self.num_nodes - n1
             _p0p3 = np.linspace(p0, p3, n1)
@@ -114,7 +116,10 @@ class Planner:
         
     def run(self, initial_guess=None):
         # Use a random positive initial guess.
-        initial_guess = np.random.randn(self.prob.num_free) if initial_guess is None else initial_guess
+        if initial_guess is None:
+            initial_guess = np.random.randn(self.prob.num_free)
+        else:
+            initial_guess
         # Find the optimal solution.
         self.solution, info = self.prob.solve(initial_guess)   
         self.interpret_solution()
@@ -183,7 +188,13 @@ def main():
     f1, a1, f2, a2 = None, None, None, None
     for _case in range(scen.ncases):
         scen.set_case(_case)
-        cache_filename = f'./cache/optyplan_{scen.name}_{_case}.npz' if scen.ncases>1 else f'./cache/optyplan_{scen.name}.npz'
+        if scen.ncases > 1:
+            cache_filename = f'./cache/optyplan_{scen.name}_{_case}.npz'
+        else:
+            cache_filename = f'./cache/optyplan_{scen.name}.npz'
+        directory = os.path.dirname(cache_filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         _p = Planner(scen, initialize=args.force or not os.path.exists(cache_filename))
         print('Planner initialized')
         compute_or_load(_p, args.force, cache_filename, tol=scen.tol, max_iter=scen.max_iter, initial_guess=None)
