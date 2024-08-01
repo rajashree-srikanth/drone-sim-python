@@ -180,7 +180,7 @@ class DiffController:
             K[:,:3]=K1
         self.K.append(K)
 
-        U = Ur #- np.dot(K, dX)
+        U = Ur - np.dot(K, dX)
         # specifying saturation limits to control inputs
         U = np.clip(U, [-self.phi_lim, self.v_min], [self.phi_lim, self.v_max])
         return Xr, - np.dot(K, dX), U

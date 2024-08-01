@@ -39,7 +39,7 @@ def main():
     ctrl = tracking.DiffController(w)
     
     # initial state conditions
-    X1 = np.array([0,-30,0,0,10]) 
+    X1 = np.array([50,30,np.deg2rad(np.pi/2),0,10]) 
     for i in range(n_ac):
         X_array[0][i][:] = X1
     
