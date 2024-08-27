@@ -20,7 +20,13 @@ import opty.direct_collocation
 
 import d2d.ploting as d2p
 import d2d.opty_utils as d2ou
-import d2d.opty_planner as d2op
+
+USE_5D_DYNAMICS = True
+if USE_5D_DYNAMICS:
+    import d2d.opty_planner5d as d2op
+else:
+    import d2d.opty_planner as d2op
+
 import d2d.optyplan_scenarios as d2oscen
 
 

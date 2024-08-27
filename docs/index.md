@@ -41,9 +41,12 @@ We begin with a [planar simplification](planar_instance) of the problem as depic
  
 <img src="plots/2d_traj1.apng" alt="PVTOL pole simulation plot" width="640">
 
+In this animation, the trajectory consist in a synchronized circle executed at constant ground speed. The controller is seen rejecting the initial perturbation before tracking the trajectory. 
 
 ### 2.3 Planning
 
  [Optimal Trajectory Planning using direct collocation](planning)
 
 <img src="plots/optyplan_1.apng" alt="" width="640">
+
+In this animation, a set of trajectories is generated for different initial and final configurations. The trajectories are computed sequentially and nothing is done to avoid collisions. 

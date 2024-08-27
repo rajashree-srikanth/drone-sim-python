@@ -102,6 +102,24 @@ class Aircraft:
             eq3 = self._spsi(self._st).diff() - g / self._sv * sym.tan(self._sphi(self._st))
         return sym.Matrix([eq1, eq2, eq3])
 
+# Symbols for one dimension 5 aircraft (time, state, input)
+class Aircraft5d:
+   def __init__(self, st=None, id=''):
+      self._st = st or sym.symbols('t')
+      self._sx, self._sy, self._spsi, self._sv, self._sphi, self._sv_sp, self._sphi_sp = sym.symbols(f'x{id}, y{id}, psi{id}, v{id}, phi{id}, vsp{id}, phisp{id}', cls=sym.Function)
+      self._state_symbols = (self._sx(self._st), self._sy(self._st), self._spsi(self._st), self._sv(self._st), self._sphi(self._st))
+      self._input_symbols = (self._sv_sp, self._sphi_sp)
+
+   def get_eom(self, atm, g=9.81, tau_v=3., tau_phi=1.):
+      wx, wy = atm.sample_sym(self._st, self._sx(self._st), self._sy(self._st))
+      eq1 = self._sx(self._st).diff() - self._sv(self._st) * sym.cos(self._spsi(self._st)) + wx
+      eq2 = self._sy(self._st).diff() - self._sv(self._st) * sym.sin(self._spsi(self._st)) + wy
+      eq3 = self._spsi(self._st).diff() - g / self._sv(self._st) * sym.tan(self._sphi(self._st))
+      eq4 = self._sv(self._st).diff() + 1./tau_v*(self._sv(self._st)-self._sv_sp(self._st))
+      eq5 = self._sphi(self._st).diff() + 1./tau_phi*(self._sphi(self._st)-self._sphi_sp(self._st))
+      return sym.Matrix([eq1, eq2, eq3, eq4, eq5])
+
+   
 
 
 # Cost functions
