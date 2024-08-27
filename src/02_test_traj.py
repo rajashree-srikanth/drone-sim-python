@@ -53,6 +53,7 @@ def parse_command_line():
     parser.add_argument('--X', help='plot state', action='store_true', default=False)
     parser.add_argument('--Y', help='plot output', action='store_true', default=False)
     parser.add_argument('--list', help='list all known trajectories', action='store_true', default=False)
+    parser.add_argument('--traj_args', help='load stored trajectory from file', default=None)
     args = parser.parse_args()
     return args
 
@@ -62,14 +63,16 @@ def main():
     if args.list or not args.traj:
         ddtf.print_available()
         return
-    try:
+    try: # get trajectory name from trajectory index
         traj_idx = int(args.traj)
         args.traj = sorted(ddtf.trajectories.items())[traj_idx][0]
     except ValueError:
         pass
     try:
-        print('loading trajectory: {}'.format(args.traj))
-        traj, desc = ddtf.get(args.traj)
+        print('loading trajectory: {} with args {}'.format(args.traj, args.traj_args))
+        if args.traj_args is None: args.traj_args={}
+        else: args.traj_args={'filename':args.traj_args}
+        traj, desc = ddtf.get(args.traj, args.traj_args)
         print('  description: {}'.format(desc))
         print(f'{traj.summarize()}')
     except KeyError:

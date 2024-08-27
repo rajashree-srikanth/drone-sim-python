@@ -74,7 +74,7 @@ def plot_trajectory_chrono(time, X=None, U=None, Yref=None, Xref=None, _f=None, 
     if U is not None: _a[2,0].plot(time, np.rad2deg(U[:,ddd.Aircraft.i_phi]), label='setpoint')
     decorate(_a[2,0], title='$\phi$', xlab='s', ylab='deg', legend=True, min_yspan=0.1)
     if title is not None: _f.canvas.manager.set_window_title(title)
-    #_f.canvas.set_window_title('State trajectory')
+    _f.canvas.manager.set_window_title('State trajectory')
     return _f, _a
 
 def plot_flat_output_trajectory_chrono(time, Yref, _f=None, _a=None, label='ref'):

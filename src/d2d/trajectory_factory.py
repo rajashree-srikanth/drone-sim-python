@@ -144,10 +144,10 @@ class TrajSlalom(ddt.Trajectory):
         return Yc#Yc.T
 register(TrajSlalom) 
 
-
+## tabulated trajectory (loaded from file) 
 class TrajTabulated(ddt.Trajectory):
     name = "tabulated"
-    desc = "tabulated"
+    desc = "tabulated, from stored points"
     extends = (-5, 25, -10, 20)  # _xmin, _xmax, _ymin, _ymax
     def __init__(self, filename='./cache/optyplan_exp0.npz'):
         _data =  np.load(filename)
@@ -343,6 +343,6 @@ def print_available():
     for i, n in enumerate(list_available()):
         print(f'{i} -> {n}')
 
-def get(traj_name):
-    return trajectories[traj_name][1](), trajectories[traj_name][0]
+def get(traj_name, init_args={}):
+    return trajectories[traj_name][1](**init_args), trajectories[traj_name][0]
 
