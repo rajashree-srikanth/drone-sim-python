@@ -209,7 +209,28 @@ class exp_6(exp_0):
     name = 'exp6'
     desc = 'Rendez-vous'
     
-scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6]
+class exp_13:
+    ncases = 1
+    tol, max_iter = 1e-5, 1500
+    vref = 12.
+    cost = d2ou.CostAirVel(vref)
+    #cost = d2ou.CostBank()
+    obj_scale = 1.
+    wind = d2ou.WindField(w=[0.,0.])
+    obstacles = ( )
+    t0, p0 = 0.,  ( 75, 40, np.deg2rad(0), 0, 12)    # initial position: t0, ( x0, y0, psi0, phi0, v0)
+    t1, p1 = 3., ( 100, 20, np.deg2rad(-90), 0, 12)    # final position
+    x_constraint, y_constraint = None, None
+    #x_constraint, y_constraint = (-5., 100.), (-50., 50.) 
+    phi_constraint = (-np.deg2rad(30.), np.deg2rad(30.))
+    v_constraint = (9., 14.)
+    hz = 10.
+    name = 'exp13 - some traj'
+    desc = 'just going'
+    def set_case(idx): pass
+    def label(idx): return ''
+    
+scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6, exp_13]
 
 def desc_all(): return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
 

@@ -102,7 +102,8 @@ class DCFController:
     # make sure to input all arrays/lists in numpy
     def get(self, n_ac, B, c, p, z_des, kr): 
         z_des.shape = (len(z_des),1) # ensuring z is a column vector
-        pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
+        # pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
+        pos_centre = p-c.T # position w.r.t circle centre
         theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
         theta = theta[:, np.newaxis] # converting to column vector
         # breakpoint()
@@ -113,7 +114,8 @@ class DCFController:
         # ensure angle limits 
         for i in range(len(e_theta)):
             if e_theta[i] > np.pi:
-                e_theta[i] = e_theta - (2*np.pi)
+                # print(e_theta)
+                e_theta[i] = e_theta[i] - (2*np.pi)
             if e_theta[i] <= -np.pi:
                 e_theta[i] = e_theta[i] + (2*np.pi)
         # e_theta = (e_theta % (2*np.pi)) - np.pi

@@ -17,7 +17,7 @@ def main():
     # introducing parameters
     v = 10 # flight speed/airspeed
     w = [0, 0] # wind vel
-    n_ac = 1
+    n_ac = 2
     dt = 0.01
     t0, tf = 0, 40
     r = 30
@@ -79,8 +79,10 @@ def main():
     
     # plotting
     plt.figure(1)
-    plt.plot(X_array[:,0,0], X_array[:,0,1], label='real')
-    plt.plot(Y_ref_array[:-1, 0, 0], Y_ref_array[:-1, 0, 1], label='ref')
+    plt.plot(X_array[:,0,0], X_array[:,0,1], label='real 1')
+    plt.plot(Y_ref_array[:-1, 0, 0], Y_ref_array[:-1, 0, 1], label='ref 1')
+    plt.plot(X_array[:,1,0], X_array[:,1,1], label='real 2')
+    plt.plot(Y_ref_array[:-1, 1, 0], Y_ref_array[:-1, 1, 1], label='ref 2')
     plt.legend()
     plt.title("traj computed")
     # plt.figure(2)

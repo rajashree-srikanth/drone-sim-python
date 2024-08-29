@@ -8,7 +8,7 @@ class Aircraft:
     s_slice_pos  = slice(s_x, s_y+1)
     g = 9.81
     def __init__(self):
-        self.tau_phi =  0.9667# 0.01
+        self.tau_phi = 0.01# 0.9667# 0.01
         self.tau_v = 1. # roll and speed time constants
 
     def cont_dyn(self, X, t, U, W):

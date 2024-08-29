@@ -173,8 +173,6 @@ class exp_0:  # single aircraft
     t0, t1, hz = 0., 10., 50.
     dx, dy = 0.,50.
     #dx, dy = 50, 50
-    p0s = (( 0.,  0.,   0.,  0., 10.), )
-    p1s = (( dx, dy,  np.pi/2,  0., 10.), )
 
     wind = d2ou.WindField()
 
@@ -198,149 +196,6 @@ class exp_0:  # single aircraft
     ncases = 1
     def set_case(idx): pass
     def label(idx): return ''
-   
-class exp_0_1(exp_0):  # varying weights
-    name = 'exp_0_1'
-    desc = 'single aircraft, varying weights'
-    t0, p0s =  0., (( 0.,  0., 0.,  0., 10.), )
-    t1, p1s = 10., (( 100, 0,  0.,  0., 10.), )
-    x_constraint, y_constraint = None, None
-    #initial_guess = 'rnd'
-    #Ks = [[1., 0.5], [1., 1.],[1., 10.],[1., 20.], [1., 30.], [1., 40.], [1., 50.]]
-    Ks = [[1., 1.],[1., 20.], [1., 40.], [1., 60.]]
-    ncases = len(Ks)
-    def set_case(idx):
-        exp_0_1.K = exp_0_1.Ks[idx]
-        exp_0_1.cost = d2mou.CostInput(vsp=13., kv=exp_0_1.K[0], kphi=exp_0_1.K[1])
-    def label(idx):  return f'kvel, kbank {exp_0_1.K}'
-
-    
-class exp_1(exp_0): # 2 aircraft face to face
-    name = 'exp_1'
-    desc = '2 aicraft face to face'
-    t1 = 4.5
-    vref = 12.
-    dpsi = 0.01
-    p0s = (( 0.,  0.,   0.,  0., 12.), ( 50.,  0.,  np.pi-dpsi, 0., 12.))
-    p1s = (( 50., 0.,   0.,  0., 12.), (  0.,  0.,  np.pi+dpsi, 0., 12.))
-    cost, obj_scale = d2mou.CostInput(vsp=vref, kv=5., kphi=1.), 1.e-1
-    #cost, obj_scale = SetCostCollision(), 1.
-    x_constraint, y_constraint = None, None
-    obstacles = []
-    #obstacles = ((25, -10, 5), )
-    initial_guess = 'rnd'
-
-class exp_1_0(exp_1): # 2 aircraft meeting
-    name = 'exp_1_0'
-    desc = '2 aicraft meeting'
-    t1 = 4.5
-    vref = 12.
-    p0s = ((  0., -20., np.pi/2,  0., 12.), ( 7.5, -20.,  np.pi/2,  0., 12.))
-    p1s = (( 40.,   5.,      0.,  0., 12.), ( 40.,   10.,  0,        0., 12.))
-    cost, obj_scale = d2mou.CostInput(vsp=vref, kv=1., kphi=1.), 1.e-1
-    x_constraint, y_constraint = None, None
-
-class exp_1_1(exp_1): # face to face, wind
-    name = 'exp_1_1'
-    desc = '2 aicraft face to face, wind'
-    #initial_guess = 'rnd'
-    initial_guess = 'tri'
-
-
-    
-class exp_2(exp_0): # four aircaft in cross
-    name = 'exp_2'
-    desc = '4 aicraft'
-    t1 = 5.5
-    vref = 12.
-    overtime=1.5#1.75
-    d = t1*vref/2 / overtime
-    p0s = ((-d, 0., 0., 0., vref), ( d,  0.,  np.pi, 0., vref), ( 0.,  d, -np.pi/2,  0., vref), ( 0., -d,  np.pi/2, 0., vref))
-    p1s = (( d, 0., 0., 0., vref), (-d,  0.,  np.pi, 0., vref), ( 0., -d, -np.pi/2,  0., vref), ( 0.,  d,  np.pi/2, 0., vref))
-    cost, obj_scale = d2mou.CostInput(vsp=vref, kv=1., kphi=1.), 1.
-
-
-
-class exp_3(exp_0): # testing obstacles
-    name = 'exp_3'
-    desc = 'single obstacle'
-    t1 = 6.5 #7.5
-    vref = 12.
-    p0s = (( 0.,  0.,   0.,  0., 10.), )
-    p1s = (( 50., 0.,   0.,  0., 10.), )
-
-    obstacles = ((25, -20, 10), )
-    #cost, obj_scale = SetCostInput(vsp=vref, kv=5., kphi=1.), 1.e-1
-    cx, cy, r = obstacles[0]
-    cost, obj_scale = d2mou.CostObstacle(c=(cx,cy), r=r, kind=0), 1.
-    x_constraint, y_constraint = None, None
-    #x_constraint, y_constraint = (-100, 100), (-100, 100)
-    #v_constraint = (11.99, 12.01)
-    v_constraint = (8., 18.)
-    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
-
-
-class exp_3_1(exp_3): # testing obstacles
-    name = 'exp_3_1'
-    desc = 'single obstacle, size/location'
-    obstacles = ((25, -20, 10), (25, -10, 10))
-
-    ncases = len(obstacles)
-    def set_case(idx):
-        cx, cy, r = exp_3_1.obstacles[idx] 
-        exp_3_1.cost = d2mou.CostObstacle(c=(cx,cy), r=r, kind=0)
-    def label(idx):  return f'obstacle {exp_3_1.obstacles[idx]}'
-
-class exp_4(exp_0): # testing obstacles
-    name = 'exp_4'
-    desc = 'set of obstacle'
-    t1 = 10.5
-    vref = 12.
-    p0s = (( 0.,  0.,   0.,  0., 10.), )
-    p1s = (( 100., 0.,   0.,  0., 10.), )
-
-    obstacles = ((30, -10, 20), (70, 15, 20), )
-    #cost, obj_scale = d2mou.CostInput(vsp=vref, kv=1., kphi=1.), 1.
-    #cost, obj_scale = d2mou.CostObstacles(obstacles, kind=1), 1.
-    cost, obj_scale = d2mou.CostComposit(kvel=1., kbank=1., kobs=1., kcol=float('NaN'), vsp=vref, obss=obstacles, obs_kind=1, rcol=3.), 1.
-    x_constraint, y_constraint = None, None
-    #x_constraint, y_constraint = (-5., 105.), (-20., 80.)
-    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
-    #v_constraint = (11.99, 12.01)
-    v_constraint = (9., 18.)
-    initial_guess = 'rnd'
-    #initial_guess = 'tri'
-    
-class exp_4_1(exp_4): # testing obstacles
-    name = 'exp_4_1'
-    desc = 'set of obstacles, size'
-    v_constraint = (9., 15.)
-    _obstacles = (((30, -10, 15), (30, 25, 15)),
-                  ((50, -10, 15), (50, 25, 15)),
-                  ((70, -10, 15), (70, 25, 15)))
-    #obstacles = _obstacles[0]
-    #cost, obj_scale = d2mou.CostObstacles(obstacles, kind=1), 1.
-    #cost, obj_scale = d2mou.CostComposit(obstacles, vsp=10., kobs=1., kvel=1., kbank=1., obs_kind=1), 1.
-    obj_scale = 1e-2
-    ncases = len(_obstacles)
-    def set_case(idx):
-        exp_4_1.obstacles = exp_4_1._obstacles[idx] 
-        #exp_4_1.cost = d2mou.CostObstacles(exp_4_1.obstacles, kind=1)
-        exp_4_1.cost, exp_4_1.obj_scale = d2mou.CostComposit(kvel=1., kbank=1., kobs=1., kcol=float('NaN'), vsp=14., obss=exp_4_1.obstacles, obs_kind=1, rcol=3.), 1.
-        #d2mou.CostComposit(exp_4_1.obstacles, vsp=14., kobs=1., kvel=1., kbank=.1, obs_kind=0)
-    def label(idx):  return f'obstacles {exp_4_1._obstacles[idx]}'
-
-
-class exp_4_2(exp_4): # testing obstacles
-    name = 'exp_4_2'
-    desc = 'set of obstacles, duration'
-    _durations = [9, 10, 11, 12]
-    ncases = len(_durations)
-    def set_case(idx):
-        exp_4_2.t1 = exp_4_2._durations [idx]
-    def label(idx):  return f'duration {exp_4_2._durations[idx]} s'
-    initial_guess = 'rnd'
-
     
 class exp_5(exp_0): # testing collisions
     name = 'exp_5'
@@ -348,8 +203,6 @@ class exp_5(exp_0): # testing collisions
     t1 = 4.2
     vref = 12.
     dpsi = 0.
-    p0s = (( 0.,  0.,   0.,  0., 12.), ( 50.,  0.,  np.pi-dpsi, 0., 12.))
-    p1s = (( 50., 0.,   0.,  0., 12.), (  0.,  0.,  np.pi+dpsi, 0., 12.))
     x_constraint, y_constraint = None, None
     obstacles = []
     #initial_guess = 'rnd'
@@ -364,33 +217,19 @@ class exp_5(exp_0): # testing collisions
             exp_5.cost, exp_5.obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=exp_5.vref, obss=[], obs_kind=0, rcol=10.), 1.e0
             
     def label(idx):  return f'obj {["Ref", "AntiCol"][idx]}'
-    
-class exp_5_1(exp_5): # testing collisions
-    name = 'exp_5'
-    desc = '2 aicraft next to one another'
-    t1 = 8.
-    vref = 12.
-    if 0:
-        p0s = (( 0.,  0.,   0.,  0., 12.), ( 0.,  0.,  0, 0., 12.))
-        p1s = (( 50., 50.,   np.pi/2,  0., 12.), (  50.,  50.,  np.pi/2, 0., 12.))
-    else:
-        p0s = (( 0.,  0.,   0.,  0., 12.), ( 0.,  5.,  0, 0., 12.))
-        p1s = (( 50., 50.,   np.pi/2,  0., 12.), (  55.,  50.,  np.pi/2, 0., 12.))
-    initial_guess = 'tri'
-    #initial_guess = 'rnd'
 
-class gvf_trial_3ac(exp_5):
-   name = 'gvf_trial_3ac'
-   desc = 'Circular formation with 3 aircraft - trial'
+class trap_4(exp_5):
+   name = 'trap_4'
+   desc = 'trapezoidal formation with 4 aircraft'
    hz = 10
-   t1 = 5.5# 14.2
+#    t1 = 5.5# 14.2
    vref = 12
    dpsi = 0
 #    p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(0), 0, 12), (0, -40, np.deg2rad(0), 0, 12), (-40, 0, np.deg2rad(0), 0, 12))
 #    p0s = ((0, 40, np.deg2rad(0), 0, 12), (25, 20, np.deg2rad(0), 0, 12), (25, -20, np.deg2rad(0), 0, 12), (0, -40, np.deg2rad(0), 0, 12))
-   p0s = ((0, 40, np.deg2rad(0), np.deg2rad(-2.00691223e+01), 12), (25, 20, np.deg2rad(0), np.deg2rad(-2.00691223e+01), 12), (25, -20, np.deg2rad(0), np.deg2rad(-2.00691223e+01), 12), (0, -40, np.deg2rad(0), np.deg2rad(-2.00691223e+01), 12))
+#    p0s = ((0, 40, np.deg2rad(-2.00691223e+01), 0, 12), (25, 20, np.deg2rad(-2.00691223e+01), 0, 12), (25, -20, np.deg2rad(-2.00691223e+01), 0, 12), (0, -40, np.deg2rad(-2.00691223e+01), 0, 12))
 #    p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(-90), 0, 12), (0, -40, np.deg2rad(180), 0, 12), (-40, 0, np.deg2rad(90), 0, 12))
-   p1s = ((75, 40, 0, 0, 12), (100, 20, 0, 0, 12), (100,-20, 0, 0, 12), (75, -40, 0, 0, 12))
+#    p1s = ((75, 40, 0, 0, 12), (100, 20, 0, 0, 12), (100,-20, 0, 0, 12), (75, -40, 0, 0, 12))
 #    p1s = ((75, 100, 0, 0, 12), (100, 60, 0, 0, 12), (75, -100, 0, 0, 12), (100, -60, 0, 0, 12))
    x_constraint = (-150, 150)
    y_constraint = (-150, 150)
@@ -402,91 +241,3 @@ class gvf_trial_3ac(exp_5):
    
    cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=vref, obss=[], obs_kind=0, rcol=10), 1.e0
    
-   
-# generating trajectory for some fancy inf traj thing
-class inf_traj_4ac(exp_5):
-    name = 'inf trajectory'
-    desc = "attempting some fancy inf-like traj"
-    hz = 10
-    # t = np.arange(6.8,7.4,0.2) # for 1st set of pts - 7 s is good!
-    # t = np.arange(10.5, 11.5, 0.2)  # for 2nd set of pts - 8 s is good!
-    t = [10]
-    vref = 12
-    dpsi = 0
-    p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(100, 40, np.deg2rad(0), np.deg2rad(20), 12), (100, -40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
-    p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(100, -40, np.deg2rad(0), np.deg2rad(-39), 12), (100, 40, np.deg2rad(0), np.deg2rad(-39), 12), (75,40, np.deg2rad(0), np.deg2rad(-39), 12))
-    # p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
-    # p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(75,40, np.deg2rad(0), np.deg2rad(-39), 12))
-    x_constraint = None
-    y_constraint = None
-    initial_guess = 'tri'
-    ncases = len(t)
-    # breakpoint()
-    def set_case(idx):
-        exp_5.t1 = inf_traj_4ac.t[idx]
-        cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=inf_traj_4ac.vref, obss=[], obs_kind=0, rcol=10), 1.e0
-   
-    def label(idx):  return f't_flight_{inf_traj_4ac.t[idx]}'
-   
-
-scens = [exp_0, exp_0_1, exp_1, exp_1_0, exp_1_1, exp_2,
-         exp_3, exp_3_1,
-         exp_4, exp_4_1, exp_4_2,
-         exp_5, exp_5_1, gvf_trial_3ac, inf_traj_4ac]
-def desc_all_scens():
-    return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
-def get_scen(idx): return scens[idx]
-
-def info_scen(idx):
-    res = ''
-    res += f'{scens[idx].name} {scens[idx].desc}\n'
-    res += f't0 {scens[idx].t0} t1 {scens[idx].t1}\n'
-    res += f'p0s {scens[idx].p0s}\np1s {scens[idx].p1s}\n'
-    res += f'x_constraint {scens[idx].x_constraint}\ny_constraint {scens[idx].y_constraint}\n'
-    res += f'v_constraint {scens[idx].v_constraint}\nphi_constraint {np.rad2deg(scens[idx].phi_constraint)}\n'
-    res += f'wind {scens[idx].wind}\n'
-    res += f'initial guess {scens[idx].initial_guess}\n'
-    return res
-
-def main():
-    args = parse_command_line()
-    if args.list or not args.scen:
-        print(desc_all_scens())
-        return
-    try:
-        scen = get_scen(int(args.scen))
-    except ValueError:
-        print(f'unknown scen {args.scen}')
-        return
-    print(info_scen(int(args.scen)))
-    
-    f1, a1, f2, a2 = None, None, None, None
-    for _case in range(scen.ncases):
-        scen.set_case(_case)
-        _p = Planner(scen, initialize=True)
-        initial_guess = None
-        initial_guess = _p.get_initial_guess(scen.initial_guess)
-        _p.run(initial_guess=initial_guess, tol=scen.tol, max_iter=scen.max_iter)
-        _p.interpret_solution()
-        f1, a1 = plot2d(_p, f1, a1, scen.label(_case))
-        f2, a2 = plot_chrono(_p, f2, a2)
-    for _a in a2: _a.autoscale()
-    plt.show()
-    
-    # exporting the values to a .csv file
-    n_ac = len(scen.p0s)
-    # print(np.shape(_p.sol_psi))
-    symbols = ['x', 'y', 'psi', 'phi', 'v']
-    states = {"time": _p.sol_time}
-    for i in range(n_ac):
-        states[f'x_{i+1}'] = list(_p.sol_x[i])
-        states[f'y_{i+1}'] = list(_p.sol_y[i])
-        states[f'psi_{i+1}'] = list(_p.sol_psi[i])
-        states[f'phi_{i+1}'] = list(_p.sol_phi[i])
-        states[f'v_{i+1}'] = list(_p.sol_v[i])
-
-    df = pd.DataFrame(states)
-    df.to_csv(r"<insert name>.csv", index=False)
-    
-if __name__ == '__main__':
-    main()

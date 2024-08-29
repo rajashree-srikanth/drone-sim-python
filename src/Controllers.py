@@ -100,8 +100,8 @@ class DiffFlatness:
         
         # computing input u in terms of (x,y)
         ac = ddyn.Aircraft()
-        U[0] = ac.tau_phi * phi_dot + X[3] # U_phi
-        U[1] = ac.tau_v * va_dot + X[4] # U_va
+        U[0] = ac.tau_phi * phi_dot + X[self.phi_i] # U_phi
+        U[1] = ac.tau_v * va_dot + X[self.v_i] # U_va
         
         # breakpoint()
         
@@ -146,13 +146,13 @@ class DiffController:
         # limits on dX, vel, phi
         self.err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1]) 
         self.v_min, self.v_max = 4, 20
-        self.phi_lim = np.deg2rad(45)
+        self.phi_lim = np.deg2rad(60)
         
         # controller parameters
         self.Q, self.R = [1, 1, 0.1, 0.01, 0.01], [8, 1] # full state feedback
         self.K = []
         
-    def RestrictAngle(self, theta): # ensures angle limits between 0 and 2*pi
+    def RestrictAngle(self, theta): # ensures angle limits between -pi and pi
         theta = (theta + np.pi) % (2*np.pi) - np.pi
         return theta
     
@@ -183,4 +183,4 @@ class DiffController:
         U = Ur - np.dot(K, dX)
         # specifying saturation limits to control inputs
         U = np.clip(U, [-self.phi_lim, self.v_min], [self.phi_lim, self.v_max])
-        return Xr, - np.dot(K, dX), U
+        return Xr, dX, U
