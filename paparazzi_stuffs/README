@@ -1,0 +1,46 @@
+paparazzi changes
+
+poine@manu:~/paparazzi$ git diff sw/ground_segment/tmtc/server.ml
+diff --git a/sw/ground_segment/tmtc/server.ml b/sw/ground_segment/tmtc/server.ml
+index 9b1186aea..16c0daf53 100644
+--- a/sw/ground_segment/tmtc/server.ml
++++ b/sw/ground_segment/tmtc/server.ml
+@@ -59,7 +59,7 @@ let get_indexed_value = fun ?(text="UNK") t i ->
+ let aircrafts = Hashtbl.create 3
+ 
+ (** Broadcast of the received aircrafts *)
+-let aircraft_msg_period = 500 (* ms *)
++let aircraft_msg_period = 75 (* ms *)
+ let wind_msg_period = 5000 (* ms *)
+ let aircraft_alerts_period = 1000 (* ms *)
+ let send_aircrafts_msg = fun _asker _values ->
+
+
+
+poine@manu:~/paparazzi$ git diff conf/telemetry/default_fixedwing_imu.xml
+diff --git a/conf/telemetry/default_fixedwing_imu.xml b/conf/telemetry/default_fixedwing_imu.xml
+index 951caa296..5db60714b 100644
+--- a/conf/telemetry/default_fixedwing_imu.xml
++++ b/conf/telemetry/default_fixedwing_imu.xml
+@@ -7,7 +7,7 @@
+       <message name="AIRSPEED"            period="1"/>
+       <message name="ALIVE"               period="5.1"/>
+       <message name="GPS"                 period="0.25"/>
+-      <message name="NAVIGATION"          period="1."/>
++      <message name="NAVIGATION"          period="0.1"/>
+       <message name="ATTITUDE"            period="0.1"/>
+       <message name="ESTIMATOR"           period="0.5"/>
+       <message name="ENERGY"              period="1.1"/>
+@@ -16,7 +16,7 @@
+       <message name="DESIRED"             period="0.2"/>
+       <message name="SEGMENT"             period="1.2"/>
+       <message name="CALIBRATION"         period="2.1"/>
+-      <message name="NAVIGATION_REF"      period="9."/>
++      <message name="NAVIGATION_REF"      period="1."/>
+       <message name="PPRZ_MODE"           period="4.9"/>
+       <message name="SETTINGS"            period="5."/>
+       <message name="STATE_FILTER_STATUS" period="2.2"/>
+
+
+
+

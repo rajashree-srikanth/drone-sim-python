@@ -216,7 +216,7 @@ class exp_5(exp_0): # testing collisions
     obstacles = []
     #initial_guess = 'rnd'
     initial_guess = 'tri'
-    ncases = 1
+    ncases = 2
     def set_case(idx):
         if idx==0:
             #exp_5.cost, exp_5.obj_scale = d2mou.CostInput(vsp=exp_5.vref, kv=70., kphi=1.), 1.e0
