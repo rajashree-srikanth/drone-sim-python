@@ -21,7 +21,7 @@ class exp_0:
     #x_constraint, y_constraint = (-5., 100.), (-50., 50.) 
     phi_constraint = (-np.deg2rad(30.), np.deg2rad(30.))
     v_constraint = (9., 14.)
-    hz = 50.
+    hz = 10.
     name = 'exp0'
     desc = 'Turn around - 12m/s objective'
     def set_case(idx): pass
@@ -230,7 +230,29 @@ class exp_13:
     def set_case(idx): pass
     def label(idx): return ''
     
-scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6, exp_13]
+class exp_14(exp_0):
+    name = "exp 14 - joining 2 points"
+    desc = "single ac traj computation for test case 2 of full sim"
+    ncases = 1
+    tol, max_iter = 1e-5, 1500
+    vref = 12
+    cost = d2ou.CostAirVel(vref)
+    obj_scale = 1
+    wind = d2ou.WindField(w=[0,0])
+    obstacles = ()
+    t0, p0 = 0, (-49.98,-58.14,2.22,-0.35,15.  )
+    t1, p1 = 12, (75, 40, 0, 0, 12)
+    x_constraint = (-150, 150)
+    y_constraint = (-150, 150)
+    v_constraint = (9., 15.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    initial_guess = 'tri'
+    
+    hz = 10
+    def set_case(idx): pass
+    def label(idx): return ''
+    
+scens = [exp_0, exp_0_1, exp_0_2, exp_0_3, exp_1, exp_1_1, exp_2, exp_3, exp_4, exp_4_1, exp_4_2, exp_5, exp_6, exp_13, exp_14]
 
 def desc_all(): return '\n'.join([f'{i}: {s.name} {s.desc}' for i, s in enumerate(scens)])
 
