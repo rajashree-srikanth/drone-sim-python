@@ -68,11 +68,13 @@ def get_trajectory(idx, x, y, psi, phi, vel):
         p0 = [x, y, psi, phi, vel]
         dt = 40.
         p1 = GOAL
+        print('GOAL', GOAL)
         scenario = Scenario(p0, p1, dt, vel)
         planner = d2op.Planner(scenario, initialize=True)
         planner.configure(tol=scenario.tol, max_iter=scenario.max_iter)
         initial_guess = planner.get_initial_guess()
         planner.run(initial_guess)
+        print('run done')
         planner.save_solution('/tmp/foo.npz')
         traj = d2trajfact.TrajTabulated('/tmp/foo.npz')
         #d2ou.plot2d(self.planner, None)
@@ -127,8 +129,9 @@ class Controller:
         self.traj = None
         self.initialized = False
         self.ctl_id, self.traj_id = ctl_id, traj_id
-        self.last_display, self.display_dt = None, 1./5.
-        self.ac_id = 12
+        print(f'using trajectory {traj_id}')
+        self.last_display, self.display_dt = None, 1./2.
+        self.ac_id = 4
 
     def run(self):
         start = timer()
@@ -161,7 +164,7 @@ class Controller:
             else:
                 ac , wind = d2dyn.Aircraft(), d2guid.WindField([0., 0.])
                 self.ctl = d2guid.DFFFController(self.traj, ac, wind)
-            ext_guid_block_id = 7
+            ext_guid_block_id = 6
             self.backend.jump_to_block(self.ac_id, ext_guid_block_id)
             self.initialized = True
             print('trajectory computed, starting control')
@@ -173,11 +176,17 @@ class Controller:
             self.last_display += self.display_dt
             self.backend.publish_track(self.traj, t)
 
+def plot_pprz_debug(ctl):
+    plt.figure()
+    Xs, ts = np.array(ctl.backend.aircraft[4].Xs), np.array(ctl.backend.aircraft[4].ts)
+    plt.plot(ts, Xs[:,0], '.')
+            
 def plot(ctl):
     t, X, Xr, U = np.array(ctl.ctl.t), np.array(ctl.ctl.X), np.array(ctl.ctl.Xref), np.array(ctl.ctl.U)#, np.array(ctl.ctl.Yr)
     d2plot.plot_trajectory_chrono(t, X)
     d2plot.plot_control_chrono(t, X=X, U=U, Yref=None, Xref=Xr)
     ctl.ctl.draw_debug()
+    plot_pprz_debug(ctl)
     plt.show()
         
 def main(args):
@@ -186,7 +195,8 @@ def main(args):
     #     if args.verbose:
     #         print(json.dumps(conf))
     conf = {'hz':20}
-    traj_id, ctl_id = 5, 1
+    traj_id, ctl_id = 1, 1
+    traj_id = int(args.traj)
     c = Controller(conf, traj_id, ctl_id)
     c.run()
     plot(c)
@@ -197,5 +207,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="3dplust Guidance")
     #parser.add_argument('config_file', help="JSON configuration file")
     parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true', help="display debug messages")
+    parser.add_argument('--traj', help='trajectory index', default=0)
     args = parser.parse_args()
     main(args)

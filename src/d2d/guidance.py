@@ -82,7 +82,8 @@ class DFFFController:
         if 1: # dim 3 feedback
             A1,B1 = A[:3,:3], A[:3,3:]
             #Q, R = [1, 1, 0.1], [2, 1]
-            Q, R = [1., 1., 20.], [200, 1000]
+            #Q, R = [1., 1., 20.], [200, 1000]
+            Q, R = [1., 1., 20.], [500, 2000]
             (K1, __X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
             K=np.zeros((2,5))
             K[:,:3]=K1
