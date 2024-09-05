@@ -181,37 +181,36 @@ class PprzBackend:
     def wgs_to_local(lon, lat):
         pass
         
-    def publish_track(self, traj, t):
+    def publish_track(self, traj, t, full=True, delete=False):
         self.display_cnt += 1
         # https://docs.paparazziuav.org/latest/paparazzi_messages.html#SHAPE
         msg = PprzMessage("ground", "SHAPE")
         msg['text'] = '.'
-        if self.nav_initialized:
-            # track
-            dt = 0.05; ts = np.arange(traj.t0, traj.t0+traj.duration, dt)
-            ps = np.array([traj.get(_t)[0] for _t in ts])
-            ps_lon_lat = (np.array([self.local_to_wgs(_x, _y) for _x, _y in ps])*1e7).astype(int)
-            msg['id'] = 0
-            msg['shape'] = 2 
-            msg['status'] = 0
-            msg['lonarr'] = ps_lon_lat[:,0]
-            msg['latarr'] = ps_lon_lat[:,1]
+        if delete or not self.nav_initialized:
+            msg['id'], msg['status'] = 0, 1
             self.ivy_interface.send(msg)
+            msg['id'] = 1
+            self.ivy_interface.send(msg)
+        else:
+            if full:
+                # track
+                dt = 0.05; ts = np.arange(traj.t0, traj.t0+traj.duration, dt)
+                ps = np.array([traj.get(_t)[0] for _t in ts])
+                ps_lon_lat = (np.array([self.local_to_wgs(_x, _y) for _x, _y in ps])*1e7).astype(int)
+                msg['id'], msg['status'] = 0, 0
+                msg['shape'] = 2 
+                msg['lonarr'] = ps_lon_lat[:,0]
+                msg['latarr'] = ps_lon_lat[:,1]
+                self.ivy_interface.send(msg)
             # point on track
             p = traj.get(t)[0]
             plonlat = (np.array(self.local_to_wgs(p[0], p[1]))*1e7).astype(int)
-            msg['id'] = 1
+            msg['id'], msg['status'] = 1, 0
             msg['shape'] = 0
-            msg['status'] = 0
             msg['lonarr'] = [plonlat[0]]
             msg['latarr'] = [plonlat[1]]
             msg['radius'] = 1.
-            self.ivy_interface.send(msg)
-        else:
-            msg['id'] = 0
-            msg['status'] = 1
-            self.ivy_interface.send(msg)
-            msg['id'] = 1
+            msg['fillcolor'] = 'red'
             self.ivy_interface.send(msg)
 
     def test_shape(self):

@@ -148,6 +148,7 @@ class Controller:
     def stop(self):
         fallback_block_id = 4
         self.backend.jump_to_block(self.ac_id, fallback_block_id)
+        self.backend.publish_track(self.traj, 0., delete=True)
         self.backend.shutdown()
 
     def step(self, t):
@@ -168,13 +169,14 @@ class Controller:
             self.backend.jump_to_block(self.ac_id, ext_guid_block_id)
             self.initialized = True
             print('trajectory computed, starting control')
+            self.backend.publish_track(self.traj, t, full=True)
         if self.initialized:
             # Control
             U = self.ctl.get(X, t)
             self.backend.send_command(self.ac_id, -np.rad2deg(U[0]), U[1])
         if t > self.last_display + self.display_dt:
             self.last_display += self.display_dt
-            self.backend.publish_track(self.traj, t)
+            self.backend.publish_track(self.traj, t, full=False)
 
 def plot_pprz_debug(ctl):
     plt.figure()
@@ -199,7 +201,7 @@ def main(args):
     traj_id = int(args.traj)
     c = Controller(conf, traj_id, ctl_id)
     c.run()
-    plot(c)
+    if args.plot: xplot(c)
 
     
 if __name__ == '__main__':
@@ -208,5 +210,6 @@ if __name__ == '__main__':
     #parser.add_argument('config_file', help="JSON configuration file")
     parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true', help="display debug messages")
     parser.add_argument('--traj', help='trajectory index', default=0)
+    parser.add_argument('--plot', help='trajectory index', default=False)
     args = parser.parse_args()
     main(args)
