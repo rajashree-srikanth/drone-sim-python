@@ -13,6 +13,7 @@ sys.path.append(PPRZ_SRC + "/sw/lib/python")
 
 import pprz_connect
 import settings
+from flight_plan import FlightPlan
 from pprzlink.ivy import IvyMessagesInterface
 from pprzlink.message import PprzMessage
 ###
@@ -34,6 +35,7 @@ class PprzAircraft:
         self.vel = 12.
         self.Xs, self.ts = [], []
         self.debug=True
+        self.flight_plan = None
 
     def set_local_position(self, x, y, t):
         self.x, self.y = x, y
@@ -172,6 +174,7 @@ class PprzBackend:
         ac_id = int(conf.id)
         self.mngr[ac_id] = settings.PprzSettingsManager(settings_xml_path, ac_id, ivy=self.ivy_interface)
         self.aircraft[ac_id] = PprzAircraft(ac_id)
+        self.aircraft[ac_id].flight_plan = FlightPlan.parse(conf.flight_plan)
 
     def local_to_wgs(self, x, y):
         u_e, u_n = x + self.nav_ref_utm_east, y + self.nav_ref_utm_north 
@@ -290,3 +293,7 @@ class PprzBackend:
         msg = PprzMessage("ground", "JUMP_TO_BLOCK")
         msg['ac_id'], msg['block_id'] = ac_id, block_id
         self.ivy_interface.send(msg)
+
+    def jump_to_block_name(self, ac_id, block_name):
+        block_id = self.aircraft[ac_id].flight_plan.get_block(block_name).no
+        self.jump_to_block(ac_id, block_id)

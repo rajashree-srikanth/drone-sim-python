@@ -131,7 +131,7 @@ class Controller:
         self.ctl_id, self.traj_id = ctl_id, traj_id
         print(f'using trajectory {traj_id}')
         self.last_display, self.display_dt = None, 1./2.
-        self.ac_id = 4
+        self.ac_id = 10
 
     def run(self):
         start = timer()
@@ -146,8 +146,8 @@ class Controller:
             self.stop()
 
     def stop(self):
-        fallback_block_id = 4
-        self.backend.jump_to_block(self.ac_id, fallback_block_id)
+        fallback_block_name = "Standby"
+        self.backend.jump_to_block_name(self.ac_id, fallback_block_name)
         self.backend.publish_track(self.traj, 0., delete=True)
         self.backend.shutdown()
 
@@ -165,8 +165,8 @@ class Controller:
             else:
                 ac , wind = d2dyn.Aircraft(), d2guid.WindField([0., 0.])
                 self.ctl = d2guid.DFFFController(self.traj, ac, wind)
-            ext_guid_block_id = 6
-            self.backend.jump_to_block(self.ac_id, ext_guid_block_id)
+            ext_guid_block_name = "Ext Guidance"
+            self.backend.jump_to_block_name(self.ac_id, ext_guid_block_name)
             self.initialized = True
             print('trajectory computed, starting control')
             self.backend.publish_track(self.traj, t, full=True)
@@ -196,8 +196,8 @@ def main(args):
     #     conf = json.load(f)
     #     if args.verbose:
     #         print(json.dumps(conf))
-    conf = {'hz':20}
-    traj_id, ctl_id = 1, 1
+    conf = {'hz':10}
+    ctl_id = 1
     traj_id = int(args.traj)
     c = Controller(conf, traj_id, ctl_id)
     c.run()
