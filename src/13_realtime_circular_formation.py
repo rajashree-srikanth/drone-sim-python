@@ -15,18 +15,39 @@ import d2d.trajectory_factory as d2trajfact
 import d2d.opty_utils as d2ou
 import d2d.opty_planner as d2op
 
-import d2d.guidance as d2guid
+import d2d.guidance_circform as d2guid
 import d2d.dynamic as d2dyn
 
 import d2d.ploting as d2plot
-
+def ConstructBMatrix(n_ac):
+    '''
+        function input arguments - 
+                                - algorithm objectives
+                                - n_ac
+                                - initialize matrices?
+        output - 
+                - ?
+        B matrix
+        mapping ac id to ac indices, to keep count and keep track of those things
+    '''
+    B = np.zeros((n_ac, n_ac-1))
+    for i in range(n_ac):
+        for j in range(n_ac-1):
+            if i==j:
+                B[i][j] = -1
+            elif (i<j) or (i>j+1):
+                B[i][j] = 0
+            elif i>j:
+                B[i][j] = 1
+    return B
+    
 def CircularFormationGVF(c, r, n_ac, t_end):
     
     # initializing parameters
     t_start, t_step = 0, 0.05
     time = np.arange(t_start, t_end, t_step)
     # n_ac = 1 # no. of aircraft in formation flight
-    windfield = ddg.WindField() # creating windfield object
+    windfield = d2guid.WindField() # creating windfield object
     aircraft = []
     controllers = []
     
@@ -47,12 +68,12 @@ def CircularFormationGVF(c, r, n_ac, t_end):
     # c_[3,:] = [15,-30]
     # c_[4,:] = [15,-90]
     
-    U_array = np.zeros((len(time),n_ac)) # rows - time; columns - ac no
-    U1_array = np.zeros((len(time),n_ac)) # useful for debugging
-    U2_array = np.zeros((len(time),n_ac)) # useful for debuggung
-    Ur_array = np.zeros((len(time),n_ac))
-    e_theta_array = np.zeros((len(time),n_ac-1))
-    X_array = np.zeros((len(time),n_ac,5))
+    # U_array = np.zeros((len(time),n_ac)) # rows - time; columns - ac no
+    # U1_array = np.zeros((len(time),n_ac)) # useful for debugging
+    # U2_array = np.zeros((len(time),n_ac)) # useful for debuggung
+    # Ur_array = np.zeros((len(time),n_ac))
+    # e_theta_array = np.zeros((len(time),n_ac-1))
+    # X_array = np.zeros((len(time),n_ac,5))
     
     # controller gains
     ke = 0.0004 # aggressiveness of the gvf guidance
@@ -83,12 +104,12 @@ def CircularFormationGVF(c, r, n_ac, t_end):
     # z_des = np.ones(n_ac-1)*(np.pi*2/n_ac) # separation angles between adjacent aircraft are equal
     z_des = np.zeros(n_ac-1) # separation angles between adjacent aircraft are equal
     
-    dcf = ddg.DCFController()
+    dcf = d2guid.DCFController()
     for i in range(n_ac): 
-        aircraft.append(ddyn.Aircraft()) # creating aircraft objects
-        traj = ddg.CircleTraj(c_[i,:]) # creating traj object
+        aircraft.append(d2dyn.Aircraft()) # creating aircraft objects
+        traj = d2guid.CircleTraj(c_[i,:]) # creating traj object
         # calling GVF controller
-        controllers.append(ddg.GVFcontroller(traj, aircraft[i], windfield))   
+        controllers.append(d2guid.GVFcontroller(traj, aircraft[i], windfield))   
         
     for i in range(1, len(time)):
         t = time[i-1]
@@ -102,7 +123,7 @@ def CircularFormationGVF(c, r, n_ac, t_end):
             X = X_array[i-1,j,:]
             gvf, ac = controllers[j], aircraft[j] # object names
             r = Rr[j]
-            traj = ddg.CircleTraj(c_[j,:])
+            traj = d2guid.CircleTraj(c_[j,:])
             e, n, H = traj.get(X,r) # obtaining required traj and their derivatives
             U, U1, U2 = gvf.get(X, ke, kd, e, n, H) # obtaining control input
             U = np.arctan(U/9.81) # roll setpoint angle in radians
@@ -124,6 +145,8 @@ class Controller:
     def __init__(self, conf, traj_id, ctl_id):
         self.conf = conf
         self.backend = d2pb.PprzBackend()
+        self.aircraft_desc = self.backend.aircraft # dictionary containing ac id ac id as keys and all info about all
+        # existing ac from pprz
         self.timestep = 1./conf['hz']
         self.scenario = None
         self.traj = None
@@ -150,7 +173,51 @@ class Controller:
         self.backend.jump_to_block_name(self.ac_id, fallback_block_name)
         self.backend.publish_track(self.traj, 0., delete=True)
         self.backend.shutdown()
+        
+    def ParameterInit_CircleFormation(self):
+        # indexing aircraft ids
+        self.ac_dict = {}
+        ac_count = 0
+        for key in self.aircraft_desc:
+            self.ac_dict[key] = ac_count
+            ac_count+=1
+        self.n_ac = len(self.ac_dict)
+        
+        # requirements
+        self.c = np.array([0,0])
+        self.c = np.ones((self.n_ac, 2))*self.c  # this will be useful for non-origin centre
+        self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
+        self.r = 60
+        self.v = 15 # flight speed
+        self.z_des = np.zeros(self.n_ac-1) # separation angles between adjacent aircraft are equal
+        
+        # controller parameters
+        self.ke = 0.0004
+        self.kd = 25
+        self.kr =20
+        self.R = self.r*np.ones((self.n_ac,1))
+        
+        # instantiating classes
+        self.dcf = d2guid.DCFController()
+        self.windfield = d2guid.WindField() # creating windfield object
+        self.controllers = []
+        for i in range(self.n_ac): 
+            self.traj = d2guid.CircleTraj() # creating traj object
+            # calling GVF controller
+            self.controllers.append(d2guid.GVFcontroller(self.traj, self.windfield))
+        self.B = ConstructBMatrix(self.n_ac)
+        self.p = np.zeros((2,self.n_ac)) # stores instantaneous position of all aircraft
 
+    def gvf_implementation(self, j, id, Rr):
+        X = self.backend.aircraft[id].get_state()
+        gvf= self.controllers[j] # object names
+        self.r = Rr[j]
+        j+=1
+        e, n, H = self.traj.get(X,self.r, self.c[j,:]) # obtaining required traj and their derivatives
+        U_phi, U1, U2 = gvf.get(X, self.e, self.kd, e, n, H) # obtaining control input
+        U_phi = np.arctan(U_phi/9.81) # roll setpoint angle in radians
+        return U_phi
+    
     def step(self, t):
         try:
             X = [x, y, psi, phi, v] = self.backend.aircraft[self.ac_id].get_state()
@@ -159,8 +226,8 @@ class Controller:
         if not self.initialized and self.backend.nav_initialized:
             # Trajectory and control initialization
             # TODO
-
-            #ext_guid_block_name = "Ext Guidance"
+            self.ParameterInit_CircleFormation()
+            
             ext_guid_block_name = "Joystick"
             self.backend.jump_to_block_name(self.ac_id, ext_guid_block_name)
             self.initialized = True
@@ -169,7 +236,20 @@ class Controller:
         if self.initialized:
             # Control
             U = 0. # TODO DCF
-            self.backend.send_command(self.ac_id, -np.rad2deg(U[0]), U[1])
+            i=0
+            for id in self.ac_dict: # assigns/updates inst pos of all ac into p
+                X1 = self.backend.aircraft[id].get_state()
+                self.p[0][i], self.p[0][i] =  X1[0], X1[1]
+                i+=1
+            # solution of DCF alg
+            Ur, e_theta = self.dcf.get(self.n_ac, self.B, self.c, self.p, self.z_des, self.kr)
+            Rr = Ur + self.R # new required radii to be tracked for each ac
+            # gvf alg
+            j=0
+            for id in self.ac_dict:
+                U = self.gvf_implementation(j, id, Rr)    
+                self.backend.send_command(self.ac_id, -np.rad2deg(U[0]), U[1])
+                j+=1
         #if t > self.last_display + self.display_dt:
         #    self.last_display += self.display_dt
         #    self.backend.publish_track(self.traj, t, full=False)
