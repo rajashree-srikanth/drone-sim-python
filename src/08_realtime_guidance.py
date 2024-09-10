@@ -165,7 +165,8 @@ class Controller:
             else:
                 ac , wind = d2dyn.Aircraft(), d2guid.WindField([0., 0.])
                 self.ctl = d2guid.DFFFController(self.traj, ac, wind)
-            ext_guid_block_name = "Ext Guidance"
+            #ext_guid_block_name = "Ext Guidance"
+            ext_guid_block_name = "Joystick"
             self.backend.jump_to_block_name(self.ac_id, ext_guid_block_name)
             self.initialized = True
             print('trajectory computed, starting control')

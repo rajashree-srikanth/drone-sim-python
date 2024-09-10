@@ -281,8 +281,15 @@ class PprzBackend:
     def send_command(self, ac_id, phic, vac):
         try:
             #print('send command')
-            self.mngr[ac_id]["fp_roll"] = phic
+            #self.mngr[ac_id]["fp_roll"] = phic
             #self.mngr[ac_id]["fp_vel"] = vac
+            msg = PprzMessage('datalink', 'JOYSTICK_RAW')
+            msg['ac_id'] = int(ac_id)
+            msg['roll'] = int(100. * phic) # convert max roll to pprz
+            msg['pitch'] = 0
+            msg['yaw'] = 0
+            msg['throttle'] = 0
+            self.ivy_interface.send(msg)
         except KeyError:
             print(f'send_command: unknown aircrafts {ac_id}')
 
