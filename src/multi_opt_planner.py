@@ -20,7 +20,6 @@ import opty.direct_collocation
 import d2d.ploting as d2p
 import d2d.opty_utils as d2ou
 import d2d.multiopty_utils as d2mou
-import d2d.multiopty_scenarios as d2moscen
 
 
     
@@ -33,7 +32,10 @@ class Planner:
 
         self.wind = scen.wind #d2ou.WindField()
         self.acs = d2mou.AircraftSet(n=len(scen.p0s))
+        #foo = self.acs.get_eom(self.wind)
+        #breakpoint()
         self.num_nodes, self.time_step, self.duration = d2ou.planner_timing(scen.t0, scen.t1, scen.hz)
+
         
         # Nodes indexing
         self._slice_x   = [slice((0+3*_i)*self.num_nodes, (1+3*_i)*self.num_nodes, 1) for _i in range(self.acs.nb_aicraft)]
@@ -124,9 +126,6 @@ def plot2d(_p, _f=None, _a=None, label=''):
     _a = _a or plt.gca()
     for i in range(_p.acs.nb_aicraft):
         _a.plot(_p.sol_x[i], _p.sol_y[i], solid_capstyle='butt', label=label)
-        dx, dy = _p.sol_x[i][-1]-_p.sol_x[i][-2], _p.sol_y[i][-1]-_p.sol_y[i][-2]
-        _a.arrow(_p.sol_x[i][-1], _p.sol_y[i][-1], dx, dy, head_width=0.5,head_length=1)
-        _a.add_patch(plt.Circle((_p.sol_x[i][0], _p.sol_y[i][0]), 0.5))
 
     for _o in _p.scen.obstacles:
         cx, cy, rm = _o
@@ -144,22 +143,18 @@ def plot_chrono(_p, _f=None, _a=None, label=''):
         d2p.decorate(axes[0], title='x', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
         axes[1].plot(_p.sol_time, _p.sol_y[i], label=f'{i}')
         d2p.decorate(axes[1], title='y', xlab='t in s', ylab='m', legend=None, xlim=None, ylim=None, min_yspan=None)
+        if _p.acs.nb_aicraft < 2:
+            axes[2].plot(_p.sol_time, np.rad2deg(_p.sol_psi[i]), label=f'{i}')
+            d2p.decorate(axes[2], title='$\\psi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
+        else:
+            dx, dy =  _p.sol_x[1] - _p.sol_x[0], _p.sol_y[1] - _p.sol_y[0] 
+            dist = np.hypot(dx,dy)
+            axes[2].plot(_p.sol_time, dist)
+            d2p.decorate(axes[2], title='$d$', xlab='t in s', ylab='m', ylim=[0, 20])
         axes[3].plot(_p.sol_time, np.rad2deg(_p.sol_phi[i]), label=f'{i}')
         d2p.decorate(axes[3], title='$\\phi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=1.)
         axes[4].plot(_p.sol_time, _p.sol_v[i], label=f'{i}')
         d2p.decorate(axes[4], title='$v_a$', xlab='t in s', ylab='m/s', legend=None, xlim=None, ylim=None, min_yspan=0.1)
-    if _p.acs.nb_aicraft < 2:
-        axes[2].plot(_p.sol_time, np.rad2deg(_p.sol_psi[i]), label=f'{i}')
-        d2p.decorate(axes[2], title='$\\psi$', xlab='t in s', ylab='deg', legend=None, xlim=None, ylim=None, min_yspan=None)
-    else: # plot distances
-        for ac0 in range(_p.acs.nb_aicraft-1):
-            for ac1 in range(ac0+1, _p.acs.nb_aicraft):
-                dx, dy =  _p.sol_x[ac1] - _p.sol_x[ac0], _p.sol_y[ac1] - _p.sol_y[ac0] 
-                dist = np.hypot(dx,dy)
-                axes[2].plot(_p.sol_time, dist, label=f'{ac0}-{ac1}')
-        d2p.decorate(axes[2], title='$d$', xlab='t in s', ylab='m', ylim=[0, 20], legend=True)
-
-            
     return fig, axes
   
 def parse_command_line():
@@ -172,46 +167,77 @@ def parse_command_line():
     return args
 
 
+class exp_0:  # single aircraft
+    name = 'exp_0'
+    desc = 'single aircraft'
+    t0, t1, hz = 0., 10., 50.
+    dx, dy = 0.,50.
+    #dx, dy = 50, 50
 
-def main():
-    args = parse_command_line()
-    if args.list or not args.scen:
-        print(d2moscen.desc_all_scens())
-        return
-    try:
-        scen = d2moscen.get_scen(int(args.scen))
-    except ValueError:
-        print(f'unknown scen {args.scen}')
-        return
-    print(d2moscen.info_scen(int(args.scen)))
-    
-    f1, a1, f2, a2 = None, None, None, None
-    for _case in range(scen.ncases):
-        scen.set_case(_case)
-        _p = Planner(scen, initialize=True)
-        initial_guess = None
-        initial_guess = _p.get_initial_guess(scen.initial_guess)
-        _p.run(initial_guess=initial_guess, tol=scen.tol, max_iter=scen.max_iter)
-        _p.interpret_solution()
-        f1, a1 = plot2d(_p, f1, a1, scen.label(_case))
-        f2, a2 = plot_chrono(_p, f2, a2)
-    for _a in a2: _a.autoscale()
-    plt.show()
-    
-    # exporting the values to a .csv file
-    n_ac = len(scen.p0s)
-    # print(np.shape(_p.sol_psi))
-    symbols = ['x', 'y', 'psi', 'phi', 'v']
-    states = {"time": _p.sol_time}
-    for i in range(n_ac):
-        states[f'x_{i+1}'] = list(_p.sol_x[i])
-        states[f'y_{i+1}'] = list(_p.sol_y[i])
-        states[f'psi_{i+1}'] = list(_p.sol_psi[i])
-        states[f'phi_{i+1}'] = list(_p.sol_phi[i])
-        states[f'v_{i+1}'] = list(_p.sol_v[i])
+    wind = d2ou.WindField()
 
-    df = pd.DataFrame(states)
-    df.to_csv(r"<insert name>.csv", index=False)
+    #initial_guess = 'rnd'
+    initial_guess = 'tri'
     
-if __name__ == '__main__':
-    main()
+    tol, max_iter = 1e-5, 5000
+    #tol, max_iter = 1e-5, 1500
+    #tol, max_iter = 1e-5, 0
+    #cost, obj_scale = SetCostBank(), 1.
+    #cost, obj_scale = SetCostAirvel(vsp=12.), 1.
+    vref = 12.
+    cost, obj_scale = d2mou.CostInput(vsp=vref, kv=5., kphi=1.), 1.e-1
+    #cost; obj_scale = SetCostNull(), 1.
+    x_constraint, y_constraint = None, None
+    x_constraint, y_constraint = (-5, 50), (-5, 50)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    v_constraint = (9., 15.)
+    obstacles = []
+
+    ncases = 1
+    def set_case(idx): pass
+    def label(idx): return ''
+    
+class exp_5(exp_0): # testing collisions
+    name = 'exp_5'
+    desc = '2 aicraft face to face'
+    t1 = 4.2
+    vref = 12.
+    dpsi = 0.
+    x_constraint, y_constraint = None, None
+    obstacles = []
+    #initial_guess = 'rnd'
+    initial_guess = 'tri'
+    ncases = 2
+    def set_case(idx):
+        if idx==0:
+            #exp_5.cost, exp_5.obj_scale = d2mou.CostInput(vsp=exp_5.vref, kv=70., kphi=1.), 1.e0
+            exp_5.cost, exp_5.obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=float('NaN'), vsp=exp_5.vref, obss=[], obs_kind=0, rcol=3.), 1.e0
+        else:
+            #exp_5.cost, exp_5.obj_scale = d2mou.CostCollision(r=6, k=2), 1.e0
+            exp_5.cost, exp_5.obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=exp_5.vref, obss=[], obs_kind=0, rcol=10.), 1.e0
+            
+    def label(idx):  return f'obj {["Ref", "AntiCol"][idx]}'
+
+class trap_4(exp_5):
+   name = 'trap_4'
+   desc = 'trapezoidal formation with 4 aircraft'
+   hz = 10
+#    t1 = 5.5# 14.2
+   vref = 12
+   dpsi = 0
+#    p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(0), 0, 12), (0, -40, np.deg2rad(0), 0, 12), (-40, 0, np.deg2rad(0), 0, 12))
+#    p0s = ((0, 40, np.deg2rad(0), 0, 12), (25, 20, np.deg2rad(0), 0, 12), (25, -20, np.deg2rad(0), 0, 12), (0, -40, np.deg2rad(0), 0, 12))
+#    p0s = ((0, 40, np.deg2rad(-2.00691223e+01), 0, 12), (25, 20, np.deg2rad(-2.00691223e+01), 0, 12), (25, -20, np.deg2rad(-2.00691223e+01), 0, 12), (0, -40, np.deg2rad(-2.00691223e+01), 0, 12))
+#    p0s = ((0, 40, np.deg2rad(0), 0, 12), (40, 0, np.deg2rad(-90), 0, 12), (0, -40, np.deg2rad(180), 0, 12), (-40, 0, np.deg2rad(90), 0, 12))
+#    p1s = ((75, 40, 0, 0, 12), (100, 20, 0, 0, 12), (100,-20, 0, 0, 12), (75, -40, 0, 0, 12))
+#    p1s = ((75, 100, 0, 0, 12), (100, 60, 0, 0, 12), (75, -100, 0, 0, 12), (100, -60, 0, 0, 12))
+   x_constraint = (-150, 150)
+   y_constraint = (-150, 150)
+   initial_guess = 'tri'
+   ncases = 1
+   
+   # wind
+#    wind = d2ou.WindField([5,2])
+   
+   cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=vref, obss=[], obs_kind=0, rcol=10), 1.e0
+   

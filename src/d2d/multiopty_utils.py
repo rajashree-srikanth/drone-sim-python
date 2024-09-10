@@ -7,12 +7,20 @@ import d2d.ploting as d2p
 import d2d.opty_utils as d2ou
 
 class AircraftSet:
+    # creating an array of class instances for each aircraft
     def __init__(self, n=2):
         self.st = sym.symbols('t')
         self.nb_aicraft = n
         self.aircraft = [d2ou.Aircraft(self.st, i) for i in range(self.nb_aicraft)]
         self._state_symbols = tuple(np.array([ac._state_symbols for ac in self.aircraft]).flatten())
         self._input_symbols = tuple(np.array([ac._input_symbols for ac in self.aircraft]).flatten())
+        # simplifying the above lines of code
+        # self.aircraft, self._state_symbols, self._input_symbols = [], [], []
+        # for i in range(self.nb_aicraft):
+        #     self.aircraft.append(np.array(d2ou.Aircraft(self.st, i)))
+        # for ac in self.aircraft:
+        #     self._state_symbols.append(ac._state_symbols)
+        #     self._input_symbols.append(ac._input_symbols)
 
     def get_eom(self, wind, g=9.81):
         return sym.Matrix.vstack(*[_a.get_eom(wind, g) for _a in self.aircraft])

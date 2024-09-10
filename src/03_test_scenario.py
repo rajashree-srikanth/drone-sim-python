@@ -14,15 +14,21 @@ import d2d.trajectory_factory as ddtf
 import d2d.scenario as dds
 from d2d.dynamic import Aircraft
 
+# X = state in dynamics.py
+# Y = [x, y]
+
+# def test_scenario(scen chosen, flags on what we want to display)
 def test_scenario(scen, show_Yref, show_Xref, show_anim, show_2d):
     Yrefs = []
     for trj in scen.trajs:
-        Yrefs.append(np.array([trj.get(t) for t in scen.time]))
+        # computing the Y for each time instance over each traj of the scenario
+        Yrefs.append(np.array([trj.get(t) for t in scen.time])) # get function performs the computation
     if show_Yref:
         _f, _a = None, None
         for i, Yref in enumerate(Yrefs):
             _f, _a = d2plot.plot_flat_output_trajectory_chrono(scen.time, Yref, _f, _a, f'ref_{i}') 
-
+            
+# visualization of outputs and computation of other derived variables
     Wrefs, Xrefs, Urefs = [], [], []
     ac = Aircraft() # FIXME, needs per Yref instance
     if show_Xref:
@@ -78,7 +84,8 @@ def parse_command_line():
 def main():
     args = parse_command_line()
     if args.list or not args.scen:
-        dds.print_available()
+    # if args.list:
+        dds.print_available() # collects in a disctionary and prints available scenarios
         return
     try:
         scen_idx = int(args.scen)
@@ -88,7 +95,7 @@ def main():
         pass
     try:
         print('loading scenario: {}'.format(args.scen))
-        scen, desc = dds.get(args.scen)
+        scen, desc = dds.get(args.scen) # the get() loads the scenario
         print('  description: {}'.format(desc))
         print(f'{scen.summarize()}')
     except KeyError:

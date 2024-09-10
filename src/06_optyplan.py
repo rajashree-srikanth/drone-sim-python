@@ -68,6 +68,9 @@ def main():
     for _case in range(scen.ncases):
         scen.set_case(_case)
         cache_filename = f'./cache/optyplan_{scen.name}_{_case}.npz' if scen.ncases>1 else f'./cache/optyplan_{scen.name}.npz'
+        directory = os.path.dirname(cache_filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         _p = d2op.Planner(scen, initialize=args.force or not os.path.exists(cache_filename))
         import time
         start = time.time()

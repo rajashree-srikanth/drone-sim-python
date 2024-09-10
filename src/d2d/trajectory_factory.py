@@ -7,14 +7,15 @@ import d2d.utils as d2u
 #
 #
 # A set of commonly used trajectories
-#
+# combination of the basic trajectories from trajectory.py
 #
 
 
 trajectories = {}
 def register(T): trajectories[T.name] = (T.desc, T)
 def list_available():
-    return ['{}: {}'.format(k,v[0]) for k,v in sorted(trajectories.items())]
+    # appends available trajectories to a dictionary
+    return ['{}: {}'.format(k,v[0]) for k,v in sorted(trajectories.items())] 
 
 class TrajCircle(ddt.TrajectoryCircle):
     name = "circle"
@@ -144,7 +145,13 @@ class TrajSlalom(ddt.Trajectory):
         return Yc#Yc.T
 register(TrajSlalom) 
 
+<<<<<<< HEAD
 ## tabulated trajectory (loaded from file) 
+||||||| 0c1c4e3
+
+=======
+# interpolation of trajectory based on given individual points
+>>>>>>> rajashree/MissionTraj
 class TrajTabulated(ddt.Trajectory):
     name = "tabulated"
     desc = "tabulated, from stored points"
@@ -343,6 +350,18 @@ def print_available():
     for i, n in enumerate(list_available()):
         print(f'{i} -> {n}')
 
+<<<<<<< HEAD
 def get(traj_name, init_args={}):
     return trajectories[traj_name][1](**init_args), trajectories[traj_name][0]
+||||||| 0c1c4e3
+def get(traj_name):
+    return trajectories[traj_name][1](), trajectories[traj_name][0]
+=======
+def get(traj_name):
+    return trajectories[traj_name][1](), trajectories[traj_name][0]
+# returns the trajecctory class, description of the trajectory class
+# trajectories is a dictionary, with each element indexed by a key, each containing 2 elements - 
+# (description of traj, calling of the class name of traj to be computed)
+
+>>>>>>> rajashree/MissionTraj
 

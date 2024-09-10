@@ -9,10 +9,10 @@ from d2d.trajectory import Trajectory
 import d2d.dynamic as ddyn
 from d2d.dynamic import Aircraft
 
-
+# setting angle limits
 def norm_mpi_pi(v): return ( v + np.pi) % (2 * np.pi ) - np.pi
 
-class WindField:
+class WindField: # initializes wind vel = 0 unless specifed in scenario
     def __init__(self, w=[0.,0.]):
         self.w = w
     def sample(self, t, loc):
@@ -21,19 +21,20 @@ class WindField:
         r = f'{self.w} m/s'
         return r
 
- 
+ # generating the differential flatness for the required reference trajectory
 class DiffFlatness:
     def state_and_input_from_output(Ys, W, ac):
         X, U, Xdot = [np.zeros(_l) for _l in [Aircraft.s_size, Aircraft.i_size, Aircraft.s_size]]
         x, y = Ys[0, Trajectory.cx], Ys[0, Trajectory.cy]
         xd, yd = Ys[1,Trajectory.cx], Ys[1,Trajectory.cy]
         xdd, ydd = Ys[2,Trajectory.cx], Ys[2,Trajectory.cy]
+        # breakpoint()
         X[Aircraft.s_x], X[Aircraft.s_y] = x, y         # x, y
         vax, vay = xd - W[0], yd - W[1]         
         va2 = vax**2+vay**2; va = np.sqrt(va2)
         X[Aircraft.s_va] = va                           # va
         X[Aircraft.s_psi] = np.arctan2(vay, vax)        # psi
-        wxdot, wydot = 0., 0. # wind is stationnary
+        wxdot, wydot = 0., 0. # wind is stationary by default
         vaxd, vayd = xdd-wxdot, ydd-wydot
         Xdot[Aircraft.s_va] = (vax*vaxd + vay*vayd)/va  # va dot
         Xdot[Aircraft.s_psi] = (vayd*vax-vaxd*vay)/va2  # psi dot
@@ -44,13 +45,13 @@ class DiffFlatness:
         #Xdot[Aircraft.s_phi] # phi_dot
         U[Aircraft.i_phi] = ac.tau_phi * Xdot[Aircraft.s_phi] + X[Aircraft.s_phi]
         U[Aircraft.i_va] = ac.tau_v * Xdot[Aircraft.s_va] + X[Aircraft.s_va]
-        
+        # breakpoint()
         
         return X, U, Xdot
 
 
 import control
-
+# the guidance loop of the differential controller - tracking of the required ref traj
 class DFFFController:
     def __init__(self, traj, ac, wind, record=True):
         self.traj, self.ac, self.wind = traj, ac, wind
@@ -62,6 +63,7 @@ class DFFFController:
             self.t, self.X, self.Xref, self.K, self.U, self.fb_poles = [], [], [], [], [], []
         self.disable_feedback = False
             
+    # the controller definition and how it works, or what it does    
     def get(self, X, t):
         _X = np.array(X)
         #print(f'{_X[0]:.1f} {_X[1]:.1f} {np.rad2deg(_X[2]):.1f}')
@@ -71,10 +73,9 @@ class DFFFController:
         U = Ur
         dX = X - Xr
         dX[Aircraft.s_psi] = norm_mpi_pi(dX[Aircraft.s_psi])
-        #print(X[Aircraft.s_psi], dX[Aircraft.s_psi])
-        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1])
-        dX = np.clip(dX, -err_sats, err_sats)
-        A, B = self.ac.cont_jac(Xr, Ur, t, W)
+        err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1]) # specifying saturation limits
+        dX = np.clip(dX, -err_sats, err_sats) # limiting array values within saturation limits
+        A, B = self.ac.cont_jac(Xr, Ur, t, W) # obtaining locally linearized model matrices
         if 0: # dim 5 feedback
             Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
             (K, __X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
@@ -83,6 +84,7 @@ class DFFFController:
             A1,B1 = A[:3,:3], A[:3,3:]
             #Q, R = [1, 1, 0.1], [2, 1]
             #Q, R = [1., 1., 20.], [200, 1000]
+            #Q, R = [1, 1, 0.1], [8, 1] # Rajashree
             Q, R = [1., 1., 20.], [500, 2000]
             (K1, __X, E) = control.lqr(A1, B1, np.diag(Q), np.diag(R))
             K=np.zeros((2,5))
@@ -122,7 +124,7 @@ class DFFFController:
             self.K.append(K)
             self.U.append(U)
             self.fb_poles.append(cl_poles)
-        return U
+        return U # FIXME ?
 
     def draw_debug(self, _f=None, _a=None):
         #Xref = np.array(self.Xref)
@@ -146,24 +148,93 @@ class DFFFController:
         _a[4].plot(U[:,1])
 
         
-#breakpoint()
+    
+# circular formation
+# distributed circular formation controller (DCF controller)
+class DCFController:
+    def __init__(self):
+        pass
+    # make sure to input all arrays/lists in numpy
+    def get(self, n_ac, B, c, p, z_des, kr): 
+        z_des.shape = (len(z_des),1) # ensuring z is a column vector
+        # pos_centre = p-c[:,np.newaxis] # position w.r.t circle centre
+        pos_centre = p-c.T # position w.r.t circle centre
+        theta = np.arctan2(pos_centre[1,:], pos_centre[0,:])
+        theta = theta[:, np.newaxis] # converting to column vector
+        # breakpoint()
+        z = np.dot(B.T, theta) # inter-vehicle angle
+        # z = theta @ B
+        # z = np.transpose(B)*theta
+        e_theta = z - z_des # inter-vehicle angle error
+        # ensure angle limits 
+        for i in range(len(e_theta)):
+            if e_theta[i] > np.pi:
+                # print(e_theta)
+                e_theta[i] = e_theta[i] - (2*np.pi)
+            if e_theta[i] <= -np.pi:
+                e_theta[i] = e_theta[i] + (2*np.pi)
+        # e_theta = (e_theta % (2*np.pi)) - np.pi
+        # breakpoint()
+        U_r = -kr*np.dot(B,e_theta) # note that U_r is a column vector
+        # print(U_r)
+        # breakpoint()
+        return U_r,np.rad2deg(e_theta)
         
+        
+# gvf controller
+# generating the trajectory - for now, it is just a circle
+# a function to plot the trajectory we want
+# a function or module for the gvf controller
+class CircleTraj():
+    def __init__(self, c = np.array([0,0])):
+        self.c = c
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
+    def get(self, X, r=1):
+        px = X[0]
+        py = X[1]
+        phi = ((px-self.c[0])**2 + (py - self.c[1])**2) - r**2
+        # p = np.asarray([self.px, self.py])
+        # phi = np.sum(np.square(p-self.c))/self.r**2
+        e = np.asarray(phi)
+        n = np.asarray([2*(px - self.c[0]), 2*(py - self.c[1])]) # gradient of phi - normal vector
+        H = np.asarray([[2, 0],[0, 2]]) # Hessian 
+        return e, n, H
+    
+class GVFcontroller:
+    def __init__(self, traj, ac, wind):
+        self.traj = traj # the traj has to be called previously in main code before
+        # this controller class is called
+        self.ac = ac
+        self.wind = wind
+        
+    def get(self, X, ke, kd, e, n, H):
+        # e, n, H = self.traj.get() # calling the get() of the trajectory class
+        # breakpoint()
+        psi = X[2] # heading angle
+        v = X[4]
+        p_dot_n = np.asarray([np.cos(psi), np.sin(psi)])
+        p_dot = v*p_dot_n
+        E = np.asarray([[0, 1], [-1, 0]]) # rotation vector
+        tau = np.matmul(E, n) # tangent vector of ac
+        pd_dot = tau - ke*e*n # @ is equivalent to matrix multiplication for numpy arrays
+        pd_dot_n = pd_dot/(np.linalg.norm(pd_dot))
+        # breakpoint()
+        orth_pd_dot_n=E@pd_dot_n
+        # m = np.array([[orth_pd_dot_n[0]*orth_pd_dot_n[0],orth_pd_dot_n[0]*orth_pd_dot_n[1]],
+        #               [orth_pd_dot_n[0]*orth_pd_dot_n[1],orth_pd_dot_n[1]*orth_pd_dot_n[1]]])
+        # manually performing orth_pd_dot_n*transpose(orth_pd_dot_n)
+        m = np.outer(orth_pd_dot_n,orth_pd_dot_n) # easier way of above operation
+        mbis = np.outer(n,p_dot) # n*transpose(p_dot)
+        
+        U1 = -(m@((E - ke*np.identity(2)*e)@H@p_dot - ke*mbis@n))
+        # breakpoint()
+        # print(U1)
+        # print(U1, E - ke*np.identity(2)*e, p_dot, pd_dot)
+        U1 = np.transpose(U1)@(E@pd_dot_n/(np.linalg.norm(pd_dot)))
+        U2 = kd*np.transpose(p_dot_n)@E@pd_dot_n
+        U = U1 + U2 # heading control action 
+        return U, U1, U2
+        
 #
 #  old stuff, initial 2D pure pursuit
 #

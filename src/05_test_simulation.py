@@ -17,34 +17,44 @@ import d2d.scenario as dds
 #
 # Dynamic Simulation
 #
-   
+# running simulation for one a/c over a time loop
 def run_simulation(time, aircraft, windfield, ctl, X0, perts):
+    # intializing vectors for X - state, and U - input
     X,U = np.zeros((len(time), ddyn.Aircraft.s_size)), np.zeros((len(time), ddyn.Aircraft.i_size))
-    Yref = np.array([ctl.traj.get(t) for t in time])
-    X[0] = X0
+    # Yref - reference traj (ref output) that the controller would follow
+    # get() function for the trajectory object returns trajectory
+    Yref = np.array([ctl.traj.get(t) for t in time]) 
+    X[0] = X0 # initial state
     for i in range(1, len(time)):
-        U[i-1] = ctl.get(X[i-1], time[i-1])#, time)
+        # returns controller action U for each time instant - ctl
+        U[i-1] = ctl.get(X[i-1], time[i-1])#, time) # get() for the controller object
         X[i] = aircraft.disc_dyn(X[i-1], U[i-1], windfield, time[i-1], time[i]-time[i-1])
         X[i] += perts[i]
     U[-1] = ctl.get(X[-1], time[-1])
     return X, U, Yref
 
+# main simulation loop - loops over no. of a/cs, scenario trajectories
 def test_simulation(scen, show_chrono, show_2d, show_anim, show_extra, save):
     windfield = scen.windfield
-    aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))]
+    aircrafts = [ddyn.Aircraft() for i in range(len(scen.trajs))] # len(scen.trajs) - no. of a/cs
     if scen.ppctl:
         ctls = [ddg.PurePursuitControler(traj) for traj in scen.trajs]
     else:
-        ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)]
+        # looping over each aircraft, under each traj (several traj together build up a scenario)
+        ctls = [ddg.DFFFController(traj, ac, windfield) for traj, ac in zip(scen.trajs, aircrafts)] # list comprehension
+        # appending to a list called ctls - each element: DFFFController class is called and assigned as object
+        # each element of ctls - contains specific case for a traj, a/c and wind
     #np.set_printoptions(precision=2, linewidth=600)
     print(f"control: {'ppctl' if scen.ppctl else 'dfctl'}")
    
     Xs, Us, Yrefs = [], [], []
+    # looping over a/cs, trajs of a scenario, for controller for each a/c
     for traj, aircraft, X0, ctl, pert in zip(scen.trajs, aircrafts, scen.X0s, ctls, scen.perts):
         X, U, Yref = run_simulation(scen.time, aircraft, windfield, ctl, X0, pert)
         Xs.append(X); Us.append(U); Yrefs.append(Yref)
         
     if show_2d:
+        breakpoint()
         d2plot.plot_trajectory_2d(scen.time, X, U, Yref)
         
     if show_chrono:
@@ -82,6 +92,7 @@ def parse_command_line():
 
 
 def main():
+    # possible input commands displayed
     args = parse_command_line()
     if args.list or not args.scen:
         dds.print_available()
@@ -89,6 +100,7 @@ def main():
     try:
         scen_idx = int(args.scen)
         args.scen = sorted(dds._scenarios.items())[scen_idx][0]
+        # uses index input to locate required scenario
         print(f'resolved scenario {scen_idx} to {args.scen}'.format(args.scen))
     except ValueError:
         pass
@@ -101,6 +113,7 @@ def main():
         print('unknown scenario {}'.format(args.scen))
         return
     show_extra = False
+    # the test simulation is called here
     anim = test_simulation(scen, args.X, args.twod, args.anim, show_extra, args.save)
     plt.show()
     

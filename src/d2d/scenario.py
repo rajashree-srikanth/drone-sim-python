@@ -9,10 +9,11 @@ from d2d.dynamic import Aircraft
 #
 #
 # A set of commonly used scenarios (vehicles, trajectories, wind, etc)
+# combination of no of a/c, wind, controller, etc
 #
-#
-
+# _scenarios{} is private
 _scenarios = {}
+# allows to add to above dictionary - appends new scenario
 def register(S): _scenarios[S.name] = (S.desc, S)
 def list_available():
     return ['{}: {}'.format(k,v[0]) for k,v in sorted(_scenarios.items())]
@@ -25,7 +26,7 @@ class Scenario:
     def __init__(self):
         # we expect time and trajs provided by children classes
         nv = len(self.trajs) # number of vehicles
-        # we fill in some defaults
+        # we fill in some defaults = 0
         try: self.time
         except AttributeError:
             tf = np.max([traj.duration for traj in self.trajs]) # min?
@@ -38,7 +39,7 @@ class Scenario:
         except AttributeError: self.windfield = d2guid.WindField()
         try: self.X0s
         except AttributeError:
-            self.X0s = []
+            self.X0s = [] # initializes the state 
             for ac, traj in zip(self.aircrafts, self.trajs):
                 t0 = self.time[0]; Yr = traj.get(t0)
                 W = self.windfield.sample(t0, Yr[0])
@@ -51,11 +52,11 @@ class Scenario:
         except AttributeError:
             self.ppctl = False
             
-    def autoscale(self):
+    def autoscale(self): # obtain limits of pos for plotting?
         pmin, pmax = (float('inf'), float('inf')), (-float('inf'), -float('inf'))
-        for traj in self.trajs:
-            for t in self.time:
-                Yr = traj.get(t)
+        for traj in self.trajs: # looping through each traj of a scenario
+            for t in self.time: # looping through all time instances
+                Yr = traj.get(t) # obtaining traj pos 
                 pmin, pmax = np.min([Yr[0], pmin], axis=0), np.max([Yr[0], pmax], axis=0)
         extends = pmax-pmin; margin = 0.05* extends; pmin -= margin; pmax += margin
         self.extends = (pmin[0], pmax[0], pmin[1], pmax[1])
@@ -74,12 +75,12 @@ class ScenLine(Scenario):
     desc = 'line'
     def __init__(self):
         Y0, Y1 = [0,25], [100, 25]
-        #Y0, Y1 = [0,25], [100, 125]
-        self.trajs = [ddt.TrajectoryLine(Y0, Y1, v=10., t0=0.)]
+        self.trajs = [ddt.TrajectoryLine(Y0, Y1, v=10., t0=0.)] # calling trajectory class
         self.extends = (-10, 110, 0, 50) # _xmin, _xmax, _ymin, _ymax
         self.windfield = d2guid.WindField()
         self.time = np.arange(0, 12., 0.01)
         self.X0s = [[10, 10, 0, 0, 10]]
+        # initializing perturbation matrix at all t for the 5 states
         self.perts = [np.zeros((len(self.time), d2dyn.Aircraft.s_size))]
         self.perts[0][600,d2dyn.Aircraft.s_y]  =  10
         Scenario.__init__(self)
@@ -115,14 +116,17 @@ class ScenCircle(Scenario):
         #duration = duration or 30.
         #duration = duration or 30.
         #self.time = np.arange(0, duration, 0.01)
-        self.time = np.arange(0, self.trajs[0].duration, 0.01)
+        self.time = np.arange(0, self.trajs[0].duration, 0.01) # time for scenario - time for only one trajectory
 
         #breakpoint()
         if 1:
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 10.]] 
         if 0:
             self.X0s = [[20, -5, 0, np.deg2rad(18.), 5.]] # for the 5m/s windfield
+            # intial state
         if 0:
+        # no initial pos specified - uses initial point from traj
+        # not excecuted    
             self.X0s=[]
             ac = d2dyn.Aircraft()
             for traj in self.trajs:
@@ -326,6 +330,7 @@ def print_available():
     print('Available scenarios:')
     for i, n in enumerate(list_available()): print(f'{i} -> {n}')
 
+# the scenario is built here
 def get(_name):
     return _scenarios[_name][1](), _scenarios[_name][0]
-
+# a scenario class is called, description
