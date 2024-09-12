@@ -108,9 +108,9 @@ def CircularFormationGVF(c, r, v, n_ac, t_start=0, t_step=0.05, t_end=1000):
     X_array = np.zeros((len(time),n_ac,5))
     
     # controller gains
-    ke = 0.0004 # aggressiveness of the gvf guidance
-    kd = 25 # speed of exponential convergence to required guidance trajectory
-    kr = 20 # controls the speed of convergence to required phase separation
+    ke = 0.1 # aggressiveness of the gvf guidance
+    kd = 2 # speed of exponential convergence to required guidance trajectory
+    kr = 5 # controls the speed of convergence to required phase separation
     R = r*np.ones((n_ac,1))
     
     X1 = np.array([20,30,-np.pi/2,0,10]) # initial state conditions

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# before launching program, run these!
+# export PAPARAZZI_HOME=/home/rajashree/paparazzi
+# export PAPARAZZI_SRC=/home/rajashree/paparazzi
 
 import sys, time
 import numpy as np
@@ -20,16 +23,6 @@ import d2d.dynamic as d2dyn
 
 import d2d.ploting as d2plot
 def ConstructBMatrix(n_ac):
-    '''
-        function input arguments - 
-                                - algorithm objectives
-                                - n_ac
-                                - initialize matrices?
-        output - 
-                - ?
-        B matrix
-        mapping ac id to ac indices, to keep count and keep track of those things
-    '''
     B = np.zeros((n_ac, n_ac-1))
     for i in range(n_ac):
         for j in range(n_ac-1):
@@ -148,36 +141,44 @@ class Controller:
         self.aircraft_desc = self.backend.aircraft # dictionary containing ac id ac id as keys and all info about all
         # existing ac from pprz
         self.timestep = 1./conf['hz']
+        #self.timestep = 1/(20)
+        print('frequency', conf['hz'])
         self.scenario = None
         self.traj = None
         self.initialized = False
         self.ctl_id, self.traj_id = ctl_id, traj_id
         print(f'using trajectory {traj_id}')
         self.last_display, self.display_dt = None, 1./2.
-        self.ac_id = 10
+        self.ac_id = 5
+        
 
     def run(self):
-        start = timer()
+        self.start = timer()
         self.last_display = 0.
         done = False
         try:
+            
             while not done:
                 time.sleep(self.timestep)
-                now = timer(); elapsed = now - start
+                now = timer(); elapsed = now - self.start
                 self.step(elapsed)
         except KeyboardInterrupt:
             self.stop()
 
     def stop(self):
         fallback_block_name = "Standby"
-        self.backend.jump_to_block_name(self.ac_id, fallback_block_name)
+        for id in self.ac_dict:
+            self.backend.jump_to_block_name(id, fallback_block_name)
         self.backend.publish_track(self.traj, 0., delete=True)
         self.backend.shutdown()
+        # print(self.X_array)
+        plt.show()
         
     def ParameterInit_CircleFormation(self):
         # indexing aircraft ids
         self.ac_dict = {}
         ac_count = 0
+        print("indexing acs. details - ", self.aircraft_desc)
         for key in self.aircraft_desc:
             self.ac_dict[key] = ac_count
             ac_count+=1
@@ -186,16 +187,24 @@ class Controller:
         # requirements
         self.c = np.array([0,0])
         self.c = np.ones((self.n_ac, 2))*self.c  # this will be useful for non-origin centre
-        self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
+        print("old c", self.c)
+        self.c[0,:], self.c[1,:] = [0,0], [0,20]
+        print("new c", self.c)
+        # self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
         self.r = 60
         self.v = 15 # flight speed
         self.z_des = np.zeros(self.n_ac-1) # separation angles between adjacent aircraft are equal
         
         # controller parameters
-        self.ke = 0.0004
-        self.kd = 25
-        self.kr =20
+        self.ke = 0.0001
+        self.kd = 5
+        self.kr = 20
         self.R = self.r*np.ones((self.n_ac,1))
+        
+        # storing
+        # self.X_array = np.zeros((1,self.n_ac, 5))
+        # self.U_array = np.zeros((1,self.n_ac))
+        # self.time_array = np.zeros(1)
         
         # instantiating classes
         self.dcf = d2guid.DCFController()
@@ -209,47 +218,83 @@ class Controller:
         self.p = np.zeros((2,self.n_ac)) # stores instantaneous position of all aircraft
 
     def gvf_implementation(self, j, id, Rr):
+        print("gvf computation")
         X = self.backend.aircraft[id].get_state()
+        # X_list = np.array(X)
+        # self.temp.append(X_list[:, np.newaxis])
+        # print(f'state for ac id {id} is {X} for gvf comp')
         gvf= self.controllers[j] # object names
         self.r = Rr[j]
-        j+=1
         e, n, H = self.traj.get(X,self.r, self.c[j,:]) # obtaining required traj and their derivatives
-        U_phi, U1, U2 = gvf.get(X, self.e, self.kd, e, n, H) # obtaining control input
+        U_phi, U1, U2 = gvf.get(X, self.ke, self.kd, e, n, H) # obtaining control input
         U_phi = np.arctan(U_phi/9.81) # roll setpoint angle in radians
         return U_phi
     
     def step(self, t):
         try:
             X = [x, y, psi, phi, v] = self.backend.aircraft[self.ac_id].get_state()
+            t = timer() - self.start 
+            plt.figure(1)
+            plt.plot(x,y,"k.")
+            plt.title("x and y pos (in m)")
+            plt.figure(2)
+            plt.plot(t, X[0],'r.')
+            plt.title("x pos (in m)")
+            plt.figure(3)
+            plt.plot(t, X[1],'r.')
+            plt.title("y pos (in m)")
+            # print("states",X)
         except AttributeError:  # aircraft not initialized
+            print("fail",self.ac_id)
             return
         if not self.initialized and self.backend.nav_initialized:
             # Trajectory and control initialization
             # TODO
+            print("initializing parameters")
             self.ParameterInit_CircleFormation()
+            print("initialized")
             
-            ext_guid_block_name = "Joystick"
-            self.backend.jump_to_block_name(self.ac_id, ext_guid_block_name)
-            self.initialized = True
+            for id in self.ac_dict:
+                ext_guid_block_name = "Joystick"
+                self.backend.jump_to_block_name(id, ext_guid_block_name)
+                self.initialized = True
+            
             print('trajectory computed, starting control')
             #self.backend.publish_track(self.traj, t, full=True)
         if self.initialized:
             # Control
+            print("in self.init block")
             U = 0. # TODO DCF
             i=0
             for id in self.ac_dict: # assigns/updates inst pos of all ac into p
                 X1 = self.backend.aircraft[id].get_state()
-                self.p[0][i], self.p[0][i] =  X1[0], X1[1]
+                self.p[0][i], self.p[1][i] =  X1[0], X1[1]
+                # print(f'ac id {id} state {X1} while init p')
                 i+=1
             # solution of DCF alg
             Ur, e_theta = self.dcf.get(self.n_ac, self.B, self.c, self.p, self.z_des, self.kr)
             Rr = Ur + self.R # new required radii to be tracked for each ac
             # gvf alg
             j=0
+            # self.temp = []
             for id in self.ac_dict:
                 U = self.gvf_implementation(j, id, Rr)    
-                self.backend.send_command(self.ac_id, -np.rad2deg(U[0]), U[1])
+                if id==4:
+                    t = timer() - self.start 
+                    plt.figure(4)
+                    plt.plot(t, -np.rad2deg(U),"b.")
+                    plt.title("control input (in deg)")
+                    plt.figure(5)
+                    plt.plot(t, e_theta,'k.')
+                    plt.title("e_theta (in deg)")
+                    plt.figure(6)
+                    plt.plot(t, Rr[0], "k.")
+                    plt.title("traacking radius")
+                # print(f'roll command input {U}')
+                if np.isfinite(U):
+                    self.backend.send_command(id, -np.rad2deg(U), 15)
                 j+=1
+            # self.X_array=np.append(self.X_array, [np.vstack(self.temp)], axis=0)
         #if t > self.last_display + self.display_dt:
         #    self.last_display += self.display_dt
         #    self.backend.publish_track(self.traj, t, full=False)
@@ -272,7 +317,7 @@ def main(args):
     #     conf = json.load(f)
     #     if args.verbose:
     #         print(json.dumps(conf))
-    conf = {'hz':10}
+    conf = {'hz':20}
     ctl_id = 1
     traj_id = int(args.traj)
     c = Controller(conf, traj_id, ctl_id)

@@ -176,7 +176,7 @@ class DCFController:
         # e_theta = (e_theta % (2*np.pi)) - np.pi
         # breakpoint()
         U_r = -kr*np.dot(B,e_theta) # note that U_r is a column vector
-        # print(U_r)
+        print(U_r)
         # breakpoint()
         return U_r,np.rad2deg(e_theta)
         
