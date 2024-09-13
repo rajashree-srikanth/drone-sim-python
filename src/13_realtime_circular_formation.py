@@ -187,10 +187,10 @@ class Controller:
         # requirements
         self.c = np.array([0,0])
         self.c = np.ones((self.n_ac, 2))*self.c  # this will be useful for non-origin centre
-        print("old c", self.c)
-        self.c[0,:], self.c[1,:] = [0,0], [0,20]
-        print("new c", self.c)
-        # self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
+        # print("old c", self.c)
+        # self.c[0,:], self.c[1,:] = [0,0], [0,20]
+        # print("new c", self.c)
+        self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
         self.r = 60
         self.v = 15 # flight speed
         self.z_des = np.zeros(self.n_ac-1) # separation angles between adjacent aircraft are equal
@@ -231,22 +231,22 @@ class Controller:
         return U_phi
     
     def step(self, t):
-        try:
-            X = [x, y, psi, phi, v] = self.backend.aircraft[self.ac_id].get_state()
-            t = timer() - self.start 
-            plt.figure(1)
-            plt.plot(x,y,"k.")
-            plt.title("x and y pos (in m)")
-            plt.figure(2)
-            plt.plot(t, X[0],'r.')
-            plt.title("x pos (in m)")
-            plt.figure(3)
-            plt.plot(t, X[1],'r.')
-            plt.title("y pos (in m)")
-            # print("states",X)
-        except AttributeError:  # aircraft not initialized
-            print("fail",self.ac_id)
-            return
+        # try:
+        #     X = [x, y, psi, phi, v] = self.backend.aircraft[self.ac_id].get_state()
+        #     t = timer() - self.start 
+        #     plt.figure(1)
+        #     plt.plot(x,y,"k.")
+        #     plt.title("x and y pos (in m)")
+        #     plt.figure(2)
+        #     plt.plot(t, X[0],'r.')
+        #     plt.title("x pos (in m)")
+        #     plt.figure(3)
+        #     plt.plot(t, X[1],'r.')
+        #     plt.title("y pos (in m)")
+        #     # print("states",X)
+        # except AttributeError:  # aircraft not initialized
+        #     print("fail",self.ac_id)
+        #     return
         if not self.initialized and self.backend.nav_initialized:
             # Trajectory and control initialization
             # TODO
@@ -284,9 +284,9 @@ class Controller:
                     plt.figure(4)
                     plt.plot(t, -np.rad2deg(U),"b.")
                     plt.title("control input (in deg)")
-                    plt.figure(5)
-                    plt.plot(t, e_theta,'k.')
-                    plt.title("e_theta (in deg)")
+                    # plt.figure(5)
+                    plt.plot(t, e_theta[0],'k.')
+                    # plt.title("e_theta (in deg)")
                     plt.figure(6)
                     plt.plot(t, Rr[0], "k.")
                     plt.title("traacking radius")
