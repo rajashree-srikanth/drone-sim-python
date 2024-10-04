@@ -15,11 +15,12 @@ import control
 
 def main():
     v = 10 # flight speed/airspeed
-    w = [0, 0]
-    windfield = ddg.WindField() # creating windfield object
+    w = [2/np.sqrt(2), 2/np.sqrt(2)] # wind vel
+    # w = [0, 0]
+    windfield = ddg.WindField(w) # creating windfield object
     n_ac = 1
     dt = 0.01
-    t0, tf = 0, 40
+    t0, tf = 0, 100
     time = np.arange(t0, tf, dt)
     aircraft = []
     ctlrs = []
@@ -30,8 +31,8 @@ def main():
     Ydd_ref_array = np.zeros((len(time),n_ac,2))
     X_array = np.zeros((len(time),n_ac,5))
     
-    traj = dtraj.TrajectoryCircle()
-    X1 = np.array([0.5,30,-np.pi/2,0,10]) # initial state conditions
+    traj = dtraj.TrajectoryCircle(c=[0,0], r=50)
+    X1 = np.array([0.5,0,-np.pi/2,0,10]) # initial state conditions
     
     for i in range(n_ac): # creating aircraft class instances 
         aircraft.append(ddyn.Aircraft())
@@ -61,12 +62,12 @@ def main():
     plt.plot(Y_ref_array[:, 0, 0], Y_ref_array[:, 0, 1], label='ref')
     plt.title("traj")
     plt.legend()
-    # plt.figure(2)
-    # plt.plot(time, X_array[:,0,0])
-    # plt.title("time, x computed")
-    # plt.figure(3)
-    # plt.plot(time, X_array[:,0,1])
-    # plt.title("time, y computed")
+    plt.figure(2)
+    plt.plot(time, X_array[:,0,0])
+    plt.title("time, x computed")
+    plt.figure(3)
+    plt.plot(time, X_array[:,0,1])
+    plt.title("time, y computed")
     # plt.figure(4)
     # plt.plot(time, U_array[:,0,0],label="Command")
     # plt.plot(time, X_array[:,0,3],label="Measured")

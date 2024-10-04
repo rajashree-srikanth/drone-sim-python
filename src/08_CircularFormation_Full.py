@@ -5,6 +5,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import matplotlib.animation as animation
 import pandas as pd
 
@@ -97,6 +98,8 @@ def CircularFormationGVF(c, r, n_ac, t_end):
     return X_array, U_array, time, U1_array, U2_array, Ur_array, e_theta_array
 
 def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
+        # rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+        # rc('text', usetex=True)
         plt.gca().set_aspect('equal')
         plt.figure(1)
         plt.plot(Y_ref[1][:], Y_ref[0][:])
@@ -108,41 +111,56 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
         
         plt.figure(2)
         for i in range(n_ac):
-            plt.plot(time, np.degrees(U_array[:,i]))
-        plt.title('GVF Control Input')
-        plt.xlabel("time (s)")
-        plt.ylabel("U (degrees)")
+            plt.plot(time[:-1], np.degrees(U_array[:-1,i]), label=f'aircraft_{i+1}')
+        plt.title('$ \\text{GVF Control Input} $')
+        plt.xlabel("$ \\text{time (s)} $")
+        plt.ylabel("$ \\text{U (degrees)}$")
+        plt.legend()
         
         plt.figure(3)
         for i in range(n_ac):
-            plt.plot(time, X_array[:,i,0])
-        plt.title('X position')
-        plt.xlabel("time (s)")
+            plt.plot(time, X_array[:,i,0], label=f'aircraft_{i+1}')
+        plt.title('$ \\text{X position}$')
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$ \\text{X (m)}$")
+        plt.legend()   
         
-        # plt.figure(8)
-        # for i in range(n_ac):
-            # plt.plot(time, X_array[:,i,1])
-        # plt.title('Y position')
-        # plt.xlabel("time (s)")
-        # plt.ylabel("Y (m)")
+        plt.figure(8)
+        for i in range(n_ac):
+            plt.plot(time, X_array[:,i,1], label=f'aircraft_{i+1}')
+        plt.title('$ \\text{Y position}$')
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$ \\text{Y (m)}$")
+        plt.legend()
+        
         plt.figure(4)
         plt.title("Velocity")
         plt.xlabel("time (s)")
         plt.ylabel("V (m/s)")
         for i in range(n_ac):
-            plt.plot(time, X_array[:,i,4])
-            
+            plt.plot(time, X_array[:,i,4], label=f'aircraft_{i+1}')
+        plt.legend()   
+        
         plt.figure(5)
-        plt.plot(time, Ur)
-        plt.title("Actual radius")
+        for i in range(n_ac):
+            plt.plot(time, Ur[:,i], label=f'aircraft_{i+1}')
+        plt.title("$ \\text{Evolution of radius over time}$")
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$ \\text{radius (in m)}$")
+        plt.legend()   
         
         # plt.figure(6)
         # plt.plot(time, U1)
         # plt.plot(time, U2)
         
         plt.figure(7)
-        plt.plot(time, e_theta_arr)
-        plt.title("Phase error (in degrees)")
+        for i in range(n_ac-1):
+            plt.plot(time[1:], e_theta_arr[1:, i], label=f'$e_\\theta$ between ac {i+1} and {i+2}')
+        plt.title("$ \\text{Phase error} \; (e_{\\theta})$")
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$e\\theta (in degrees)$")
+        plt.legend()
+        
         # plt.figure(2)
         # ax = plt.axes(projection='3d')
         # ax.plot3D(time, X_array[:,0,0], X_array[:,0,1])
@@ -165,7 +183,7 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
             return (line)
         
         ani = animation.FuncAnimation(fig=fig, func=update, frames=len(time), interval=1)
-        writervideo = animation.FFMpegWriter(fps=60)
+        # writervideo = animation.FFMpegWriter(fps=60)
         # ani.save('circular_formation.avi',writer=writervideo)
         plt.show()
 
@@ -174,6 +192,7 @@ def main():
     r = 60
     n_ac = int(input("Enter no. of aircraft: ")) # no. of aircraft in formation flight
     t_end = 150*(int(n_ac/3) + 1) # simulation time 
+    t_end = 150
     # phase convergence time increases with no. of aicraft in simulation, hence 
     # it is made variable
     print(t_end)
@@ -181,19 +200,19 @@ def main():
     theta_ref = np.arange(0, 2*np.pi, 0.01)
     Y_ref = [r*np.cos(theta_ref), r*np.sin(theta_ref)]
     
-    # converting 3d array X_array to 2d before exporting to csv
-    # states = time[:, np.newaxis]
-    symbols = ['x', 'y', 'psi', 'phi', 'v']
-    states = {"time": time}
-    for i in range(n_ac):
-        for j in range(len(symbols)):
-            states[f'{symbols[j]}_{i+1}'] = list(X_array[:, i, j])
-    breakpoint()
+    # # converting 3d array X_array to 2d before exporting to csv
+    # # states = time[:, np.newaxis]
+    # symbols = ['x', 'y', 'psi', 'phi', 'v']
+    # states = {"time": time}
+    # for i in range(n_ac):
+    #     for j in range(len(symbols)):
+    #         states[f'{symbols[j]}_{i+1}'] = list(X_array[:, i, j])
+    # breakpoint()
     
     
-    # # exporting results to csv file
-    df = pd.DataFrame(states)
-    df.to_csv(r"states_over_time.csv", index=False)
+    # # # exporting results to csv file
+    # df = pd.DataFrame(states)
+    # df.to_csv(r"states_over_time.csv", index=False)
     
     # plotting results
     # d2plot.plot_trajectory_2d(time, X_array, [U_array,0], Y_ref)

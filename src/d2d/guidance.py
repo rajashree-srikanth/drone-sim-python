@@ -76,11 +76,11 @@ class DFFFController:
         err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1]) # specifying saturation limits
         dX = np.clip(dX, -err_sats, err_sats) # limiting array values within saturation limits
         A, B = self.ac.cont_jac(Xr, Ur, t, W) # obtaining locally linearized model matrices
-        if 0: # dim 5 feedback
+        if 1: # dim 5 feedback
             Q, R = [1, 1, 0.1, 0.01, 0.01,], [8, 1]
             (K, __X, E) = control.lqr(A, B, np.diag(Q), np.diag(R))
             cl_poles, cl_vp =  np.linalg.eig(A-np.dot(B, K))
-        if 1: # dim 3 feedback
+        if 0: # dim 3 feedback
             A1,B1 = A[:3,:3], A[:3,3:]
             #Q, R = [1, 1, 0.1], [2, 1]
             #Q, R = [1., 1., 20.], [200, 1000]

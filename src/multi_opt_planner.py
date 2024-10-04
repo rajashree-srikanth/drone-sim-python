@@ -200,10 +200,12 @@ class exp_0:  # single aircraft
 class exp_5(exp_0): # testing collisions
     name = 'exp_5'
     desc = '2 aicraft face to face'
-    t1 = 4.2
+    t1 = 4
     vref = 12.
     dpsi = 0.
     x_constraint, y_constraint = None, None
+    p0s = (( 0.,  0.,   0.,  0., 12.), ( 50.,  0.,  np.pi-dpsi, 0., 12.))
+    p1s = (( 50., 0.,   0.,  0., 12.), (  0.,  0.,  np.pi+dpsi, 0., 12.))
     obstacles = []
     #initial_guess = 'rnd'
     initial_guess = 'tri'
@@ -241,3 +243,87 @@ class trap_4(exp_5):
    
    cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=vref, obss=[], obs_kind=0, rcol=10), 1.e0
    
+class inf_traj_4ac(exp_5):
+    name = 'inf trajectory'
+    desc = "attempting some fancy inf-like traj"
+    hz = 10
+    # t = np.arange(6.8,7.4,0.2) # for 1st set of pts - 7 s is good!
+    # t = np.arange(10.5, 11.5, 0.2)  # for 2nd set of pts - 8 s is good!
+    t = [10]
+    vref = 12
+    dpsi = 0
+    p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(100, 40, np.deg2rad(0), np.deg2rad(20), 12), (100, -40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
+    p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(100, -40, np.deg2rad(0), np.deg2rad(-39), 12), (100, 40, np.deg2rad(0), np.deg2rad(-39), 12), (75,40, np.deg2rad(0), np.deg2rad(-39), 12))
+    # p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
+    # p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(75,40, np.deg2rad(0), np.deg2rad(-39), 12))
+    x_constraint = None
+    y_constraint = None
+    initial_guess = 'tri'
+    ncases = len(t)
+    # breakpoint()
+    def set_case(idx):
+        exp_5.t1 = inf_traj_4ac.t[idx]
+        cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=inf_traj_4ac.vref, obss=[], obs_kind=0, rcol=10), 1.e0
+   
+    def label(idx):  return f't_flight_{inf_traj_4ac.t[idx]}'
+    
+class inf_traj_4ac(exp_5):
+    name = 'inf trajectory'
+    desc = "attempting some fancy inf-like traj"
+    hz = 10
+    # t = np.arange(6.8,7.4,0.2) # for 1st set of pts - 7 s is good!
+    # t = np.arange(10.5, 11.5, 0.2)  # for 2nd set of pts - 8 s is good!
+    t = [10]
+    vref = 12
+    dpsi = 0
+    p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(100, 40, np.deg2rad(0), np.deg2rad(20), 12), (100, -40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
+    p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(100, -40, np.deg2rad(0), np.deg2rad(-39), 12), (100, 40, np.deg2rad(0), np.deg2rad(-39), 12), (75,40, np.deg2rad(0), np.deg2rad(-39), 12))
+    # p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
+    # p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(75,40, np.deg2rad(0), np.deg2rad(-39), 12))
+    x_constraint = None
+    y_constraint = None
+    initial_guess = 'tri'
+    ncases = len(t)
+    # breakpoint()
+    def set_case(idx):
+        exp_5.t1 = inf_traj_4ac.t[idx]
+        cost, obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=inf_traj_4ac.vref, obss=[], obs_kind=0, rcol=10), 1.e0
+   
+    def label(idx):  return f't_flight_{inf_traj_4ac.t[idx]}'
+    
+class anticoll(exp_0):
+    name = 'testing collision'
+    desc = "2 ac collision"
+    wind = d2ou.WindField()
+    tol, max_iter = 1e-5, 5000
+    
+    hz = 10
+    # t = np.arange(6.8,7.4,0.2) # for 1st set of pts - 7 s is good!
+    # t = np.arange(10.5, 11.5, 0.2)  # for 2nd set of pts - 8 s is good!
+    # t = [4]
+    t0 = 0
+    t1 = 4
+    
+    vref = 12
+    dpsi = 0
+    # p0s = ((0, 40, np.deg2rad(0), np.deg2rad(0), 12),(0,-40, np.deg2rad(0), np.deg2rad(0), 12))
+    # p1s = ((0,-40, np.deg2rad(0), np.deg2rad(0), 12),(0, 40, np.deg2rad(0), np.deg2rad(0), 12))
+    p0s = (( 0.,  0.,   0.,  0., 12.), ( 50.,  0.,  np.pi-dpsi, 0., 12.))
+    p1s = (( 50., 0.,   0.,  0., 12.), (  0.,  0.,  np.pi+dpsi, 0., 12.))
+    # p0s = ((75, 40, np.deg2rad(0), np.deg2rad(20), 12),(75, -40, np.deg2rad(0), np.deg2rad(20), 12))
+    # p1s = ((75,-40, np.deg2rad(0), np.deg2rad(-39), 12),(75,40, np.deg2rad(0), np.deg2rad(-39), 12))
+    x_constraint = None
+    y_constraint = None
+    initial_guess = 'tri'
+    ncases = 2
+    # breakpoint()
+    def set_case(idx):
+        if idx==0:
+            # exp_5.t1 = anticoll.t[0]
+            anticoll.cost, anticoll.obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=float('NaN'), vsp=anticoll.vref, obss=[], obs_kind=0, rcol=3), 1.e0
+        else:
+            # exp_5.t1 = anticoll.t[0]
+            anticoll.cost, anticoll.obj_scale = d2mou.CostComposit(kvel=70., kbank=1., kobs=float('NaN'), kcol=10., vsp=anticoll.vref, obss=[], obs_kind=0, rcol=3), 1.e0
+   
+    def label(idx):  return f't_flight_{anticoll.t1}'
+    

@@ -145,11 +145,14 @@ class DiffController:
         
         # limits on dX, vel, phi
         self.err_sats = np.array([20, 20 , np.pi/3, np.pi/4, 1]) 
-        self.v_min, self.v_max = 4, 20
-        self.phi_lim = np.deg2rad(60)
+        self.v_min, self.v_max = 9, 15
+        # self.v_min, self.v_max = 4, 20 # for main simulation
+        # self.phi_lim = np.deg2rad(60)
+        self.phi_lim = np.deg2rad(45)
         
         # controller parameters
         self.Q, self.R = [1, 1, 0.1, 0.01, 0.01], [8, 1] # full state feedback
+        # self.Q, self.R = np.dot(20,[1, 1, 0.1, 0.01, 0.01]), np.dot(10,[8, 1]) # full state feedback
         self.K = []
         
     def RestrictAngle(self, theta): # ensures angle limits between -pi and pi
@@ -181,6 +184,10 @@ class DiffController:
         self.K.append(K)
 
         U = Ur - np.dot(K, dX)
+        plt.figure(10)
+        # breakpoint()
+        plt.plot(t, np.rad2deg(dX[3]), ".k")
+        # U = - np.dot(K, dX)
         # specifying saturation limits to control inputs
         U = np.clip(U, [-self.phi_lim, self.v_min], [self.phi_lim, self.v_max])
         return Xr, dX, U

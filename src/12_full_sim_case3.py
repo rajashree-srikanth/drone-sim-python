@@ -108,9 +108,9 @@ def CircularFormationGVF(c, r, v, n_ac, t_start=0, t_step=0.05, t_end=1000):
     X_array = np.zeros((len(time),n_ac,5))
     
     # controller gains
-    ke = 0.1 # aggressiveness of the gvf guidance
-    kd = 2 # speed of exponential convergence to required guidance trajectory
-    kr = 5 # controls the speed of convergence to required phase separation
+    ke = 0.0004 # aggressiveness of the gvf guidance
+    kd = 25 # speed of exponential convergence to required guidance trajectory
+    kr = 20 # controls the speed of convergence to required phase separation
     R = r*np.ones((n_ac,1))
     
     X1 = np.array([20,30,-np.pi/2,0,10]) # initial state conditions
@@ -298,26 +298,25 @@ def implement_controller(n_ac, time, x_ref, y_ref, v, w, X0s):
     return X_array, U_array, X_ref_array, Yd_ref_array, Ydd_ref_array, dX_array
 
 # plotting
-def plotting_states(c, n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
+def plotting_states(c, n_ac, X_array, U_array, U1, U2, x_ref, y_ref, time, Ur, e_theta_arr):
         
         # plt.gca().set_aspect('equal')
-        plt.figure(1)
-        for i in range(n_ac):  
-            plt.plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1], "k--")
+        plt.figure()
+        for i in range(n_ac): 
             plt.plot(X_array[:,i,0], X_array[:,i,1], label=f'ac_{i+1}')
         plt.title('XY Trajectory vs reference')
         plt.xlabel("X (m)")
         plt.ylabel("Y (m)")
         plt.legend()
         
-        plt.figure(2)
+        plt.figure()
         for i in range(n_ac):
             plt.plot(time, X_array[:,i,0], label=f'ac_{i+1}')
         plt.title('X position')
         plt.xlabel("time (s)")
         plt.legend()
         
-        plt.figure(3)
+        plt.figure()
         for i in [0, 2]:
             plt.plot(time, X_array[:,i,1], label=f'ac_{i+1}')
         plt.title('Y position')
@@ -325,13 +324,13 @@ def plotting_states(c, n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_
         plt.ylabel("Y (m)")
         plt.legend()
         
-        plt.figure(4)
+        plt.figure()
         plt.plot(time, np.rad2deg(X_array[:,:,2]))
         plt.title("heading angle psi")
         plt.xlabel("time (s)")
         plt.ylabel("deg")
         
-        plt.figure(5)
+        plt.figure()
         for i in [1,3]:
             plt.plot(time, X_array[:,i,1], label=f'ac_{i+1}')
         plt.title('Y position')
@@ -339,7 +338,7 @@ def plotting_states(c, n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_
         plt.ylabel("Y (m)")
         plt.legend()
         
-        plt.figure(6)
+        plt.figure()
         for i in [1,2]:
             plt.plot(time, X_array[:,i,1], label=f'ac_{i+1}')
         plt.title('Y position')
@@ -347,13 +346,20 @@ def plotting_states(c, n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_
         plt.ylabel("Y (m)")
         plt.legend()
         
-        plt.figure(7)
+        plt.figure()
         for i in [0,3]:
             plt.plot(time, X_array[:,i,1], label=f'ac_{i+1}')
         plt.title('Y position')
         plt.xlabel("time (s)")
         plt.ylabel("Y (m)")
         plt.legend()
+        
+        plt.figure()
+        for i in range(n_ac):
+            plt.plot(x_ref[:,i], y_ref[:,i], label=f'aircraft_{i+1}')
+        plt.title("$ \\text{Trajectory to be tracked} $")
+        plt.xlabel("$ \\text{x (in m)}")
+        plt.ylabel("$\\text{y (in m)}")
 
 def plotting_inputs(time, time_1, X_array, U_array, Ur, U1=[0,0], U2=[0,0]):
     plt.figure()
@@ -465,7 +471,7 @@ def main():
     p = trajectory_optimization_single(scen, delta)
     print("phase 2 trajectory optimization complete")
     # breakpoint()
-    plt.show()
+    # plt.show()
     
     # tracking trajectory
     # x_ref_2, y_ref_2 - rows: time, columns: no. of ac
@@ -483,6 +489,7 @@ def main():
     
     #### phase 3 of flight ####
     X3_i = tuple(map(tuple, X_array_2[-1, :, :]))
+    # breakpoint()
     time_3, x_ref_3, y_ref_3, psi_ref_3 = ExtractTrajData(df, n_ac)
     # since traj is symm, we only have half, so extending it
     time_3, x_ref_3, y_ref_3, psi_ref = ExtendTraj_symm(n_ac, x_ref_3, y_ref_3, psi_ref_3, time_3)
@@ -506,19 +513,82 @@ def main():
     print("time elapsed = ", time[-1])
     
     #### plotting ####
+    # breakpoint()
     print("plotting results")
     theta_ref = np.arange(0, 2*np.pi, 0.01)
     Y_ref = [r*np.cos(theta_ref), r*np.sin(theta_ref)]
-    plotting_states(c, n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr)
-    plotting_inputs(time, time_1, X_array, U_array, Ur)
-    plotting_misc(time_1, e_theta_arr_1)
-    plt.figure(1)
-    plt.plot(xy_actual[:,0], xy_actual[:,1],".k", label="actual")
-    plt.plot(xy_conv[:,0],xy_conv[:,1],".r", label="convergence")
+    # making reference traj matrix
+    x_ref, y_ref = np.zeros((len(theta_ref),n_ac)), np.zeros((len(theta_ref),n_ac))
+    for i in range(n_ac):
+        x_ref[:,i], y_ref[:,i] = r*np.cos(theta_ref)+c[i,0], r*np.sin(theta_ref)+c[i,1]
+    x_ref, y_ref = np.append(x_ref, x_ref_2, axis=0), np.append(y_ref, y_ref_2, axis=0)
+    x_ref, y_ref = np.append(x_ref, x_ref_3, axis=0), np.append(y_ref, y_ref_3, axis=0)
+    # breakpoint()
+    # plt.figure()
+    # i=0
+    # plt.plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1],"--",label="phase I")
+    # plt.plot(x_ref_2[:,i], y_ref_2[:,i],"--",label="phase II")
+    # plt.plot(x_ref_3[:,i], y_ref_3[:,i],"--",label="phase III")
+    # plt.title("$\\text{Reference Trajectory}$")
+    # plt.xlabel("$\\text{X (in m)}$")
+    # plt.ylabel("$\\text{Y (in m)}$")
+    # plotting_states(c, n_ac, X_array, U_array, U1, U2, x_ref, y_ref, time, Ur, e_theta_arr)
+    # plotting_inputs(time, time_1, X_array, U_array, Ur)
+    # plotting_misc(time_1, e_theta_arr_1)
+    # plt.figure(1)
+    # plt.plot(xy_actual[:,0], xy_actual[:,1],".k", label="actual")
+    # plt.plot(xy_conv[:,0],xy_conv[:,1],".r", label="convergence")
+    # display_animation(time, X_array, Y_ref)
+    plt.figure(14)
+    i=2
+    plt.plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1],label="Phase I ref")
+    plt.plot(x_ref_2[:,i], y_ref_2[:,i],label="Phase II ref")
+    plt.plot(x_ref_3[:,i], y_ref_3[:,i],label="Phase III ref")
+    plt.plot(X_array[:,i,0], X_array[:,i,1],"--",label="Real traj")
+    plt.xlabel("x (in m)")
+    plt.ylabel("y (in m)")
+    plt.title("Coordinated Flight")
+    plt.legend()
+    fig, axs = plt.subplots(2,2, sharex=True, sharey=True)
+    plt.suptitle("$ \\text{Real vs Reference Trajectory}$")
+    for i in range(n_ac):
+        if i==0:
+            axs[i,0].plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1],label="Phase I ref")
+            axs[i,0].plot(x_ref_2[:,i], y_ref_2[:,i],label="Phase II ref")
+            axs[i,0].plot(x_ref_3[:,i], y_ref_3[:,i],label="Phase III ref")
+            axs[i,0].plot(X_array[:,i,0], X_array[:,i,1],"--",label="Real traj")
+            axs[i,0].set_title("$\\text{Aircraft 1}$")
+            # axs[i,0].legend()
+        if i==1:
+            axs[0,1].plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1])
+            axs[0,1].plot(x_ref_2[:,i], y_ref_2[:,i])
+            axs[0,1].plot(x_ref_3[:,i], y_ref_3[:,i])
+            axs[0,1].plot(X_array[:,i,0], X_array[:,i,1],"--")
+            axs[0,1].set_title("$\\text{Aircraft 2}$")
+            # axs[0,1].legend()
+        if i==2:
+            axs[1,0].plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1])
+            axs[1,0].plot(x_ref_2[:,i], y_ref_2[:,i])
+            axs[1,0].plot(x_ref_3[:,i], y_ref_3[:,i])
+            axs[1,0].plot(X_array[:,i,0], X_array[:,i,1],"--")
+            axs[1,0].set_title("$\\text{Aircraft 3}$")
+            # axs[1,0].legend()
+        if i==3:
+            axs[1,1].plot(Y_ref[0][:]+c[i,0], Y_ref[1][:]+c[i,1])
+            axs[1,1].plot(x_ref_2[:,i], y_ref_2[:,i])
+            axs[1,1].plot(x_ref_3[:,i], y_ref_3[:,i])
+            axs[1,1].plot(X_array[:,i,0], X_array[:,i,1],"--")
+            axs[1,1].set_title("$\\text{Aircraft 4}$")
+            # axs[1,1].legend()
+    for ax in axs.flat:
+        ax.xaxis.set_tick_params(which='both', labelbottom=True)
+        ax.yaxis.set_tick_params(which='both', labelleft=True)
+        ax.set_xlabel("$\\text{x (in m)}$") 
+        ax.set_ylabel("$\\text{y (in m)}$")
+        ax.grid(True)
+    fig.legend(loc="lower left", ncols=4, mode="expand")
     plt.legend()
     plt.show()
-    display_animation(time, X_array, Y_ref)
-    
 main()
 
 def commented_code():

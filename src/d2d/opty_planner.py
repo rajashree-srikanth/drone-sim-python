@@ -7,6 +7,7 @@
 import numpy as np, sympy as sym
 import collections
 import opty.direct_collocation
+import matplotlib.pyplot as plt
 
 import d2d.opty_utils as d2ou
 
@@ -73,7 +74,7 @@ class Planner:
             initial_guess[self._slice_x] = rng.uniform(cx[0],cx[1], self.num_nodes)
             if cy is None: cy = [-100, 100]
             initial_guess[self._slice_y] = rng.uniform(cy[0],cy[1],self.num_nodes)
-            initial_guess[self._slice_psi] = rng.uniform(-np.pi, np.pi,self.num_nodes)    
+            initial_guess[self._slice_psi] = rng.uniform(-np.pi, np.pi,self.num_nodes) 
         elif kind == 'tri': # equilateral triangle for arriving on time
             p0, p1 = np.array(self.exp.p0[:2]), np.array(self.exp.p1[:2]) # start and end
             p0p1 = p1-p0

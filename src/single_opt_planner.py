@@ -87,7 +87,13 @@ class Planner:
             initial_guess[self._slice_x] = rng.uniform(cx[0],cx[1], self.num_nodes)
             if cy is None: cy = [-100, 100]
             initial_guess[self._slice_y] = rng.uniform(cy[0],cy[1],self.num_nodes)
-            initial_guess[self._slice_psi] = rng.uniform(-np.pi, np.pi,self.num_nodes)    
+            initial_guess[self._slice_psi] = rng.uniform(-np.pi, np.pi,self.num_nodes) 
+            
+            plt.figure(20)
+            plt.plot(initial_guess[self._slice_x], initial_guess[self._slice_y], ".", markersize=10)
+            plt.title("Initial Guess - Random Distribution")    
+            plt.xlabel("x (in m)")
+            plt.ylabel("y (in m)")
         elif kind == 'tri': # equilateral triangle for arriving on time
             p0, p1 = np.array(self.exp.p0[:2]), np.array(self.exp.p1[:2]) # start and end
             p0p1 = p1-p0
@@ -108,6 +114,12 @@ class Planner:
             initial_guess[self._slice_psi] = np.hstack((psi0*np.ones(n1), psi1*np.ones(n2)))
             initial_guess[self._slice_v] = self.exp.vref
             initial_guess[self._slice_phi] = np.zeros(self.num_nodes)
+            
+            plt.figure(20)
+            plt.plot(initial_guess[self._slice_x], initial_guess[self._slice_y], ".", markersize=10)
+            plt.title("Initial Guess - Triangle Distribution")    
+            plt.xlabel("x (in m)")
+            plt.ylabel("y (in m)")
         else: # straight line
             p0, p1 = np.array(self.exp.p0[:2]), np.array(self.exp.p1[:2])
             initial_guess[self._slice_x] = np.linspace(p0[0], p1[0], self.num_nodes)
@@ -245,6 +257,34 @@ class exp_1():
     
     hz = 10
     def set_case(idx): pass
+    def label(idx): return ''
+    
+class exp_2():
+    name = "exp 1 - joining 2 points"
+    desc = "comparing"
+    tol, max_iter = 1e-5, 1500
+    vref = 12
+    obj_scale = 1
+    wind = d2ou.WindField(w=[0,0])
+    obstacles = ()
+    t0 = 0
+    p0 = ( 0.,  0.,    0.,    0., 10.) # initial position
+    p1 = ( 0., 30., np.pi,    0., 10.)    # final position
+    # t = np.arange(5,12,2)
+    t = [5]
+    ncases = len(t)
+    x_constraint = (-50, 50)
+    y_constraint = (-50, 50)
+    v_constraint = (9., 15.)
+    phi_constraint = (-np.deg2rad(40.), np.deg2rad(40.))
+    initial_guess = 'tri'
+    # initial_guess = 'rnd'
+    
+    hz = 10
+    def set_case(idx): 
+        exp_2.t1 = exp_2.t[idx]
+        exp_2.cost = d2ou.CostAirVel(exp_2.vref)
+        
     def label(idx): return ''
     
 # if __name__ == '__main__':

@@ -190,7 +190,7 @@ class Controller:
         # print("old c", self.c)
         # self.c[0,:], self.c[1,:] = [0,0], [0,20]
         # print("new c", self.c)
-        self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [25,-20], [25,-100], [0,-100]
+        self.c[0,:], self.c[1,:], self.c[2,:], self.c[3,:] = [0,-20], [50,-20], [50,-100], [0,-100]
         self.r = 60
         self.v = 15 # flight speed
         self.z_des = np.zeros(self.n_ac-1) # separation angles between adjacent aircraft are equal
@@ -317,7 +317,7 @@ def main(args):
     #     conf = json.load(f)
     #     if args.verbose:
     #         print(json.dumps(conf))
-    conf = {'hz':20}
+    conf = {'hz':10}
     ctl_id = 1
     traj_id = int(args.traj)
     c = Controller(conf, traj_id, ctl_id)

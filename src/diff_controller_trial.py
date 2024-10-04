@@ -16,11 +16,12 @@ import Controllers as tracking
 def main():
     # introducing parameters
     v = 10 # flight speed/airspeed
-    w = [0, 0] # wind vel
-    n_ac = 2
-    dt = 0.01
-    t0, tf = 0, 40
-    r = 30
+    # w = [2/np.sqrt(2), 2/np.sqrt(2)] # wind vel
+    w = [0,0]
+    n_ac = 1
+    dt = 0.05
+    t0, tf = 0, 100
+    r = 50
     time = np.arange(t0, tf, dt)
     
     # initializing matrices
@@ -39,7 +40,8 @@ def main():
     ctrl = tracking.DiffController(w)
     
     # initial state conditions
-    X1 = np.array([50,30,np.deg2rad(np.pi/2),0,10]) 
+    X1 = np.array([0.5,0,-np.pi/2,0,10]) # initial state conditions
+    # X1 = np.array([0,0,np.deg2rad(np.pi/2),0,15]) 
     for i in range(n_ac):
         X_array[0][i][:] = X1
     
@@ -51,11 +53,11 @@ def main():
             # Y_ref, Yd_ref, Ydd_ref = traj.get(t)
             X = X_array[i-1, j, :]
             # ctrl = tracking.DiffController(w)
-            Xr, Ur, U = ctrl.ComputeGain(t, X, Y_ref, Yd_ref, Ydd_ref, Yddd_ref, ac)
+            Xr, dX, U = ctrl.ComputeGain(t, X, Y_ref, Yd_ref, Ydd_ref, Yddd_ref, ac)
             # print("reference", Xr, Ur)
             X_new = ac.disc_dyn(X, U, windfield, t, dt)
             X_array[i][j] = X_new
-            U_array[i-1][j] = Ur
+            U_array[i-1][j] = U
             Y_ref_array[i-1][j] = Y_ref
             Yd_ref_array[i-1][j] = Yd_ref
             Ydd_ref_array[i-1][j] = Ydd_ref
@@ -79,32 +81,74 @@ def main():
     
     # plotting
     plt.figure(1)
-    plt.plot(X_array[:,0,0], X_array[:,0,1], label='real 1')
-    plt.plot(Y_ref_array[:-1, 0, 0], Y_ref_array[:-1, 0, 1], label='ref 1')
-    plt.plot(X_array[:,1,0], X_array[:,1,1], label='real 2')
-    plt.plot(Y_ref_array[:-1, 1, 0], Y_ref_array[:-1, 1, 1], label='ref 2')
-    plt.legend()
-    plt.title("traj computed")
+    plt.plot(X_array[:,0,0], X_array[:,0,1], "k", label='$\\text{Real Traj}$')
+    plt.plot(Y_ref_array[:-1, 0, 0], Y_ref_array[:-1, 0, 1], color="orange",label='$\\text{Ref Traj}$')
+    # plt.plot(X_array[:,1,0], X_array[:,1,1], label='real 2')
+    # plt.plot(Y_ref_array[:-1, 1, 0], Y_ref_array[:-1, 1, 1], label='ref 2')
+    plt.legend(loc="upper right")
+    plt.title('$\\text{Ref vs Tracked Trajectory}$')
+    
+    # Define the subplots with a 2x2 grid
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+
+    # Set main title for the entire figure
+    fig.suptitle("Controller Performance Using Feedback Control")
+
+    # Plot on the first subplot (top-left)
+    axs[0, 0].plot(time, X_array[:,0,0], label="X actual")
+    axs[0, 0].plot(time[:-1], Y_ref_array[:-1, 0, 0], label="X reference")
+    axs[0, 0].set_title("X Position")
+    axs[0, 0].set_xlabel("Time (s)")
+    axs[0, 0].set_ylabel("X (in m)")
+    axs[0, 0].legend()
+    axs[0, 0].grid(True)
+
+    # Plot on the second subplot (top-right)
+    axs[0, 1].plot(time, X_array[:,0,1], label="Y actual")
+    axs[0, 1].plot(time[:-1], Y_ref_array[:-1, 0, 1], label="Y reference")
+    axs[0, 1].set_title("Y position")
+    axs[0, 1].set_xlabel("Time (s)")
+    axs[0, 1].set_ylabel("Y (in m)")
+    axs[0, 1].legend()
+    axs[0, 1].grid(True)
+
+    # Plot on the third subplot (bottom-left)
+    axs[1, 0].plot(time[:-1], np.rad2deg(U_array[:-1,0,0]), label="Commanded bank input")
+    axs[1, 0].plot(time[:-1], np.rad2deg(X_array[:-1,0,3]), label="Measured bank angle")
+    axs[1, 0].set_title("Bank Angle Input vs Measured")
+    axs[1, 0].set_xlabel("Time (s)")
+    axs[1, 0].set_ylabel("Angle (deg)")
+    axs[1, 0].legend()
+    axs[1, 0].grid(True)
+
+    # Plot on the fourth subplot (bottom-right)
+    axs[1, 1].plot(time[:-1], U_array[:-1,0,1], label="Commanded velocity input")
+    axs[1, 1].plot(time[:-1], X_array[:-1,0,4], label="Measured velocity")
+    axs[1, 1].set_title("Velocity Input vs Measured")
+    axs[1, 1].set_xlabel("Time (s)")
+    axs[1, 1].set_ylabel("Velocity (m/s)")
+    axs[1, 1].legend()
+    axs[1, 1].grid(True)
     # plt.figure(2)
     # plt.plot(time, X_array[:,0,0])
     # plt.title("time, x computed")
     # plt.figure(3)
     # plt.plot(time, X_array[:,0,1])
     # plt.title("time, y computed")
-    plt.figure(4)
-    plt.plot(time, np.rad2deg(U_array[:,0,0]),label="Commanded input \phi_c")
-    plt.plot(time, np.rad2deg(X_array[:,0,3]),label="Measured bank angle")
-    plt.ylabel("Angle (deg)")
-    plt.xlabel("time (s)")
-    plt.legend()
-    plt.title("Bank angle input vs measured")
-    plt.figure(5)
-    plt.plot(time, U_array[:,0,1],label="Commanded input v_c")
-    plt.plot(time, X_array[:,0,4],label="Measured")
-    plt.ylabel("Vel (m/s)")
-    plt.xlabel("time (s)")
-    plt.legend()
-    plt.title("Velocity input vs measured")
+    # plt.figure(4)
+    # plt.plot(time, np.rad2deg(U_array[:,0,0]),label="Commanded input \phi_c")
+    # plt.plot(time, np.rad2deg(X_array[:,0,3]),label="Measured bank angle")
+    # plt.ylabel("Angle (deg)")
+    # plt.xlabel("time (s)")
+    # plt.legend()
+    # plt.title("Bank angle input vs measured")
+    # plt.figure(5)
+    # plt.plot(time, U_array[:,0,1],label="Commanded input v_c")
+    # plt.plot(time, X_array[:,0,4],label="Measured")
+    # plt.ylabel("Vel (m/s)")
+    # plt.xlabel("time (s)")
+    # plt.legend()
+    # plt.title("Velocity input vs measured")
     # plt.figure(6)
     # plt.plot(time, Y_ref_array[:, 0, 0], label="Yrefx")
     # plt.plot(time, Yd_ref_array[:, 0, 0], label="Ydrefx")
@@ -115,9 +159,9 @@ def main():
     # plt.plot(time, Yd_ref_array[:, 0, 1], label="Ydrefy")
     # plt.plot(time, Ydd_ref_array[:, 0, 1], label="Yddrefy")
     # plt.legend()
-    # plt.figure(8)
-    # plt.plot(time, X_array[:, 0, 2], label='psi')
-    # plt.legend()
+    plt.figure(8)
+    plt.plot(time, np.rad2deg(X_array[:, 0, 2]), label='psi')
+    plt.legend()
     plt.show()
     
 main()

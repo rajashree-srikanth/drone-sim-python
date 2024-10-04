@@ -142,10 +142,11 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
         
         plt.figure(2)
         for i in range(n_ac):
-            plt.plot(time, np.degrees(U_array[:,i]))
-        plt.title('GVF Control Input')
-        plt.xlabel("time (s)")
-        plt.ylabel("U (degrees)")
+            plt.plot(time[:-1], np.degrees(U_array[:-1,i]), label=f'aircraft_{i+1}')
+        plt.title('$ \\text{GVF Control Input} $')
+        plt.xlabel("$ \\text{time (s)} $")
+        plt.ylabel("$ \\text{U (degrees)}$")
+        plt.legend()
         
         plt.figure(3)
         for i in range(n_ac):
@@ -172,16 +173,24 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
             plt.plot(time, X_array[:,i,4])
             
         plt.figure(5)
-        plt.plot(time, Ur)
-        plt.title("Actual radius")
+        for i in range(n_ac):
+            plt.plot(time, Ur[:,i], label=f'aircraft_{i+1}')
+        plt.title("$ \\text{Evolution of radius over time}$")
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$ \\text{radius (in m)}$")
+        plt.legend()   
         
         # plt.figure(6)
         # plt.plot(time, U1)
         # plt.plot(time, U2)
         
         plt.figure(7)
-        plt.plot(time, e_theta_arr)
-        plt.title("Phase error (in degrees)")
+        for i in range(n_ac-1):
+            plt.plot(time[1:], e_theta_arr[1:, i], label=f'$e_\\theta$ between ac {i+1} and {i+2}')
+        plt.title("$ \\text{Phase error} \; (e_{\\theta})$")
+        plt.xlabel("$ \\text{time (s)}$")
+        plt.ylabel("$e\\theta (in degrees)$")
+        plt.legend()
         # plt.figure(2)
         # ax = plt.axes(projection='3d')
         # ax.plot3D(time, X_array[:,0,0], X_array[:,0,1])
@@ -190,8 +199,10 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
         # animating
         fig, ax = plt.subplots()
         line = ax.plot(X_array[0,:,0], X_array[0,:,1], "k.", label='Time: 0 s')[0]
-        ax.plot(Y_ref[1][:], Y_ref[0][:], "--", label="Reference Trajectory")
-        ax.set(xlim=[-150, 150], ylim=[-150, 150], xlabel='X (m)', ylabel='Y [m]', 
+        for i in range(n_ac):
+            ax.plot(Y_ref[0][:]+c_[i,0], Y_ref[1][:]+c_[i,1], "--")
+        # ax.plot(Y_ref[1][:], Y_ref[0][:], "--", label="Reference Trajectory")
+        ax.set(xlim=[-90, 130], ylim=[-170, 50], xlabel='X (m)', ylabel='Y [m]', 
                title='Trajectory')
         l = ax.legend()
         def update(frame):
@@ -205,7 +216,8 @@ def plotting(n_ac, X_array, U_array, U1, U2, Y_ref, time, Ur, e_theta_arr):
         
         ani = animation.FuncAnimation(fig=fig, func=update, frames=len(time), interval=1)
         writervideo = animation.FFMpegWriter(fps=60)
-        # ani.save('circular_formation.avi',writer=writervideo)
+        plt.axis('equal')
+        ani.save('circular_formation_4_diffc.avi',writer=writervideo)
         plt.show()
 
 def main():
@@ -214,7 +226,7 @@ def main():
     n_ac = 4
     # n_ac = int(input("Enter no. of aircraft: ")) # no. of aircraft in formation flight
     # t_end = 150*(int(n_ac/3) + 1) # simulation time 
-    t_end = 200
+    t_end = 125
     # phase convergence time increases with no. of aicraft in simulation, hence 
     # it is made variable
     print(t_end)
